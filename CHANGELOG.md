@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased: Empa microphone side confirmed
+## Unreleased: Hum Bench page
+- `viz/hum_bench.html`: interactive page with a thrust slider, animated rigs
+  (downwash, sound rings to the mic, slowed top view), live readouts, three
+  charts (dB(A) vs thrust, tone ladder, push vs twist), a slipstream/intake
+  switch, and Web Audio playback of each prop's predicted tones.
+- Same model as the Python code: M1 CT/CP plus Gutin and A-weighting in
+  JavaScript; checked to match `run_m2.py` to 0.001 dB(A).
+- `tests/test_viz.py`: fails if the page's coefficients or air constants drift
+  from the Python model.
+
+## v0.2.1-m2 (2026-10-28): Empa microphone side confirmed
 - Empa's mic is on the slipstream side, 60° below the rotor plane (Meister et
   al. 2026, Section 3.2, Fig. 8): θ = 150° in Gutin's convention, not 30°.
   `EMPA_THETA_DEG` changed to 150; r = 1 m kept (Empa scaled 1.4 m to 1 m).

@@ -33,6 +33,8 @@ technical name. Keep code readable over clever.
 - `scripts/run_m1.py`: writes `results/m1_spin_speed.csv` and charts
 - `src/propnoise/gutin.py`: Milestone 2, tonal hum (Gutin) and A-weighting
 - `scripts/run_m2.py`: writes `results/m2_hum.csv` and charts
+- `viz/hum_bench.html`: interactive page; copies CT/CP and constants into JS
+  (`tests/test_viz.py` keeps them in sync, so update the page when geometry changes)
 - `tests/`: physics sanity checks + Empa ordering checks
 
 ## Milestones

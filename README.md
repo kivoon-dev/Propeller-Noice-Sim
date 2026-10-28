@@ -21,6 +21,15 @@ pytest                       # checks the physics and Empa's findings
 On Google Colab: `!git clone <this repo URL>`, `%cd propeller-noise-sim`, then the
 same commands with `!` in front.
 
+## See it and hear it
+
+[`viz/hum_bench.html`](viz/hum_bench.html) is an interactive bench: drag the
+thrust, watch both propellers spin with their downwash and sound reaching the
+microphone, read the live numbers and charts, and press Listen to hear each
+propeller's predicted hum. Download the file and open it in any web browser (it
+works offline; fonts need internet but fall back to system fonts). It runs the same
+model as the Python code, and `tests/test_viz.py` checks its numbers still match.
+
 ## Results so far (Milestone 1)
 
 | Thrust | 5152 (high pitch) | LR5126-2 (low pitch) |

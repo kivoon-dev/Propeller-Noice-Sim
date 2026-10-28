@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Propeller Hum Bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a test-bench sheet. Controls strip, two rig panels side by side, verdict line, three instrument charts, notes. */
+:root {
+  --paper: #f2f5f7;
+  --sheet: #fbfcfd;
+  --ink: #15222c;
+  --muted: #5a6a76;
+  --rule: #d2dce3;
+  --grid: #e3eaef;
+  --p1: #2a63c9;          /* Gemfan 5152, high pitch (same blue as the Python charts) */
+  --p2: #c9581a;          /* Gemfan LR5126-2, low pitch (same orange) */
+  --signal: #0d8a74;      /* microphone and sound */
+  --good: #1f7a46;
+  --bad: #b3261e;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d1419; --sheet: #121b22; --ink: #e3ebf0; --muted: #8b9ba7; --rule: #26343e; --grid: #1b2731;
+    --p1: #6b9cf2; --p2: #ef8c4c; --signal: #3cc3a6; --good: #5cc98a; --bad: #f07b72; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d1419; --sheet: #121b22; --ink: #e3ebf0; --muted: #8b9ba7; --rule: #26343e; --grid: #1b2731;
+  --p1: #6b9cf2; --p2: #ef8c4c; --signal: #3cc3a6; --good: #5cc98a; --bad: #f07b72; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1; font-weight: 700; }
+h2 { font-size: 24px; line-height: 1.1; }
+h3 { font-size: 19px; line-height: 1.15; }
+p { margin: 0; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lead { max-width: 66ch; color: var(--muted); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+header { display: flex; flex-direction: column; gap: 10px; }
+
+/* Controls */
+.controls {
+  display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1.3fr); gap: 20px 28px;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 18px 20px;
+}
+.control { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.control label, .control .label { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.thrust-row { display: flex; align-items: center; gap: 16px; }
+.thrust-val { font-family: var(--display); font-size: 40px; font-weight: 700; line-height: 1; min-width: 4.2ch; font-variant-numeric: tabular-nums; }
+.thrust-val small { font-size: 20px; color: var(--muted); font-weight: 500; margin-left: 2px; }
+input[type="range"] { width: 100%; accent-color: var(--signal); height: 28px; }
+.scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button {
+  font: 500 13px/1 var(--body); color: var(--ink); background: transparent; border: 1px solid var(--rule);
+  border-radius: 4px; padding: 9px 11px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.seg button:focus-visible, input:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.hint { font-size: 12.5px; color: var(--muted); }
+.vol { display: flex; align-items: center; gap: 10px; }
+.vol input { flex: 1; }
+
+/* Rig panels */
+.bench { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 14px 18px 4px; }
+.panel-head h2 { display: flex; align-items: center; gap: 10px; }
+.swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.chip { font-family: var(--mono); font-size: 11.5px; color: var(--muted); border: 1px solid var(--rule); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+canvas { display: block; width: 100%; height: 290px; }
+.readouts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); }
+.readout { padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.readout + .readout { border-left: 1px solid var(--rule); }
+.readout .k { font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.readout .v { font-family: var(--mono); font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.readout .v small { color: var(--muted); font-size: 12px; margin-left: 2px; }
+.level { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 18px 16px; border-top: 1px solid var(--rule); }
+.level .big { font-family: var(--display); font-size: 46px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.level .big small { font-size: 20px; color: var(--muted); font-weight: 500; margin-left: 4px; }
+.meter { flex: 1; height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; align-self: center; max-width: 220px; }
+.meter i { display: block; height: 100%; width: 0; border-radius: 4px; transition: width 120ms linear; }
+
+/* Verdict */
+.verdict { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 14px 18px; border-left: 4px solid var(--good); background: var(--sheet); border-radius: 0 6px 6px 0; }
+.verdict.wrong { border-left-color: var(--bad); }
+.verdict p { font-size: 17px; max-width: 70ch; }
+.pill { font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 999px; color: var(--paper); background: var(--good); white-space: nowrap; }
+.verdict.wrong .pill { background: var(--bad); }
+
+/* Charts */
+.charts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.chart { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.chart p { font-size: 13.5px; color: var(--muted); }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+svg text { font-family: var(--mono); font-size: 10.5px; fill: var(--muted); }
+svg .axis { stroke: var(--rule); stroke-width: 1; fill: none; }
+svg .gridl { stroke: var(--grid); stroke-width: 1; fill: none; }
+svg .cursor { stroke: var(--signal); stroke-width: 1.5; stroke-dasharray: 3 3; fill: none; }
+svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+.legend i.dash { border-top-style: dashed; }
+
+/* Notes */
+.notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 36px; border-top: 1px solid var(--rule); padding-top: 22px; }
+.notes div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.notes p, .notes li { font-size: 14px; color: var(--muted); max-width: 64ch; }
+.notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.notes code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.notes a { color: var(--signal); }
+
+@media (max-width: 980px) {
+  .controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .controls .control:first-child { grid-column: 1 / -1; }
+  .charts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .bench, .notes { grid-template-columns: minmax(0, 1fr); }
+  .controls { grid-template-columns: minmax(0, 1fr); }
+  .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .readout:nth-child(3) { border-left: 0; }
+  .readout:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  canvas { height: 250px; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Gemfan 5152 vs LR5126-2 · hover · Gutin tonal model · mic at 1 m</span>
+    <h1>Propeller Hum Bench</h1>
+    <p class="lead">Drag the thrust. Both propellers speed up to make that much push, and the model predicts how loud each one's hum is at Empa's microphone, 60° below the rotor in the slipstream. Press Listen to hear the predicted tones.</p>
+  </header>
+
+  <section class="controls" aria-label="Controls">
+    <div class="control">
+      <label for="thrust">Thrust per propeller</label>
+      <div class="thrust-row">
+        <div class="thrust-val" id="thrustVal">2.00<small>N</small></div>
+        <input type="range" id="thrust" min="0.5" max="3.5" step="0.05" value="2.0" aria-describedby="thrustHint">
+      </div>
+      <div class="scale" aria-hidden="true"><span>0.5 N</span><span>Empa's test range</span><span>3.5 N</span></div>
+      <span class="hint" id="thrustHint">About 0.2 kg to 0.36 kg of lift, roughly what one rotor of a small FPV drone holds in hover.</span>
+    </div>
+    <div class="control">
+      <span class="label" id="sideLabel">Microphone side</span>
+      <div class="seg" role="group" aria-labelledby="sideLabel">
+        <button type="button" id="sideSlip" aria-pressed="true">Slipstream · Empa</button>
+        <button type="button" id="sideIntake" aria-pressed="false">Intake side</button>
+      </div>
+      <span class="hint" id="sideHint">θ = 150° from the thrust direction. Push and twist noise add up.</span>
+    </div>
+    <div class="control">
+      <span class="label" id="listenLabel">Listen to the hum</span>
+      <div class="seg" role="group" aria-labelledby="listenLabel">
+        <button type="button" id="listenOff" aria-pressed="true">Off</button>
+        <button type="button" id="listenP0" aria-pressed="false">5152</button>
+        <button type="button" id="listenP1" aria-pressed="false">LR5126-2</button>
+      </div>
+      <div class="vol"><label for="volume" class="hint">Volume</label><input type="range" id="volume" min="0" max="1" step="0.01" value="0.5"></div>
+    </div>
+  </section>
+
+  <section class="bench" aria-label="Rig view">
+    <article class="panel" id="panel0"></article>
+    <article class="panel" id="panel1"></article>
+  </section>
+
+  <section class="verdict" id="verdict" aria-live="polite">
+    <span class="pill" id="verdictPill">Matches Empa</span>
+    <p id="verdictText"></p>
+  </section>
+
+  <section class="charts" aria-label="Charts">
+    <figure class="chart" style="margin:0">
+      <h3>Hum level vs thrust</h3>
+      <div class="legend" id="legendA"></div>
+      <svg id="chartA" viewBox="0 0 340 230" role="img" aria-label="Hum level in dB(A) against thrust for both propellers"></svg>
+      <p>Solid lines are the side you picked; dashed lines are the other side. The dotted line follows the slider.</p>
+    </figure>
+    <figure class="chart" style="margin:0">
+      <h3>Tone ladder at this thrust</h3>
+      <div class="legend" id="legendB"></div>
+      <svg id="chartB" viewBox="0 0 340 230" role="img" aria-label="Level of each hum tone in dB(A) against frequency"></svg>
+      <p>The hum is the blade-passing note plus overtones at 2×, 3×, … Each overtone is far quieter, so the first note is almost all you hear.</p>
+    </figure>
+    <figure class="chart" style="margin:0">
+      <h3>Push vs twist</h3>
+      <div class="legend" id="legendC"></div>
+      <svg id="chartC" viewBox="0 0 340 230" role="img" aria-label="Thrust term, torque term and their sum in newtons for both propellers"></svg>
+      <p>Gutin's loudness depends on push (thrust) plus twist (torque). On the slipstream side they point the same way and add. Switch to the intake side to watch them cancel.</p>
+    </figure>
+  </section>
+
+  <section class="notes">
+    <div>
+      <h3>What this model leaves out</h3>
+      <ul>
+        <li>Only the steady hum (tones). The hiss from turbulent air over the blades is missing. It sits above 2-4 kHz, where Empa found the toroidal propeller differs.</li>
+        <li>All blade force is squeezed into one point at 80% of the radius. That is why the intake side can cancel almost perfectly, which real blades do not.</li>
+        <li>Blade widths are estimates until the real blades are measured, so RPM may be off by 10-20%. The ordering between the two props is the trustworthy part.</li>
+        <li>The tones you hear are pure sine waves at the predicted levels. Real propellers also buzz from motor noise and blade-to-blade differences.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Where the numbers come from</h3>
+      <p>This page runs the same model as the Python code in <code>propeller-noise-sim</code>: thrust and power coefficients from the Milestone 1 blade-element model (<code>bemt.py</code>), then Gutin's formula with A-weighting from Milestone 2 (<code>gutin.py</code>).</p>
+      <p class="num" style="font-size:13px">p<sub>m</sub> = (mBΩ / 2√2πc₀r) · |T cosθ − Qc₀/(ΩR<sub>e</sub>²)| · J<sub>mB</sub>(mBΩR<sub>e</sub> sinθ / c₀)</p>
+      <p>Comparison data: Meister, Van Renterghem &amp; Pieren, <a href="https://doi.org/10.1051/aacus/2026057" target="_blank" rel="noopener">Acta Acustica 10, 57 (2026)</a>, Section 3.2, Fig. 8. Air at 15 °C, sea level.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  // ---- Model (same numbers as the Python package) ------------------------
+  const RHO = 1.225, C0 = 340.3, R = 5.1 * 0.0254 / 2, B = 2, RE = 0.8 * R, DIST = 1.0, PREF = 20e-6;
+  const AREA = Math.PI * R * R;
+  const PROPS = [
+    { name: "Gemfan 5152", sub: "high pitch · 5.2 in", ct: 0.017386514338501503, cp: 0.002664190693561391, color: "--p1" },
+    { name: "Gemfan LR5126-2", sub: "low pitch · 2.6 in", ct: 0.009815171382406262, cp: 0.0010133931919100285, color: "--p2" },
+  ];
+  const SIDES = { slip: { theta: 150, label: "Slipstream", hint: "θ = 150° from the thrust direction. Push and twist noise add up." },
+                  intake: { theta: 30, label: "Intake", hint: "θ = 30° from the thrust direction. Push and twist noise fight each other." } };
+
+  function operatingPoint(prop, T) {
+    const omega = Math.sqrt(T / (prop.ct * RHO * AREA * R * R));
+    const tip = omega * R;
+    const P = prop.cp * RHO * AREA * tip ** 3;
+    return { T, omega, rpm: omega * 60 / (2 * Math.PI), tip, mach: tip / C0, bpf: B * omega / (2 * Math.PI),
+             P, Q: P / omega, vi: Math.sqrt(T / (2 * RHO * AREA)) };
+  }
+
+  function besselJ(n, x) {               // power series; fine for the small arguments here (x < 4)
+    let term = 1;
+    for (let i = 1; i <= n; i++) term *= (x / 2) / i;
+    let sum = term;
+    const q = -((x / 2) ** 2);
+    for (let k = 0; k < 60; k++) {
+      term *= q / ((k + 1) * (k + 1 + n));
+      sum += term;
+      if (Math.abs(term) < 1e-18 * Math.abs(sum)) break;
+    }
+    return sum;
+  }
+
+  function aWeight(f) {                  // IEC 61672-1
+    const f2 = f * f;
+    const ra = (12194 ** 2 * f2 * f2) / ((f2 + 20.6 ** 2) * Math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12194 ** 2));
+    return 20 * Math.log10(ra) + 2.0;
+  }
+
+  function hum(op, thetaDeg) {
+    const th = thetaDeg * Math.PI / 180;
+    const push = op.T * Math.cos(th);
+    const twist = -op.Q * C0 / (op.omega * RE * RE);
+    const load = Math.abs(push + twist);
+    const tones = [];
+    let eA = 0, e = 0;
+    for (let m = 1; m <= 10; m++) {
+      const n = m * B;
+      const p = (n * op.omega / (2 * Math.SQRT2 * Math.PI * C0 * DIST)) * load * Math.abs(besselJ(n, n * op.omega * RE * Math.sin(th) / C0));
+      const f = n * op.omega / (2 * Math.PI);
+      const L = 20 * Math.log10(p / PREF);
+      const LA = L + aWeight(f);
+      tones.push({ m, f, p, L, LA });
+      e += 10 ** (L / 10); eA += 10 ** (LA / 10);
+    }
+    return { push, twist, net: push + twist, tones, dB: 10 * Math.log10(e), dBA: 10 * Math.log10(eA) };
+  }
+  window.__humModel = { operatingPoint, hum, PROPS };   // for checking against Python
+
+  // ---- State -------------------------------------------------------------
+  const state = { T: 2.0, side: "slip", listen: -1, volume: 0.5 };
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const $ = (id) => document.getElementById(id);
+  let colors = {};
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ["--paper", "--sheet", "--ink", "--muted", "--rule", "--grid", "--p1", "--p2", "--signal"]) colors[k] = cs.getPropertyValue(k).trim();
+  }
+
+  // ---- Panels --------------------------------------------------------------
+  const panels = PROPS.map((prop, i) => {
+    const el = $("panel" + i);
+    el.innerHTML = `
+      <div class="panel-head">
+        <h2><span class="swatch" style="background:var(${prop.color})"></span>${prop.name}</h2>
+        <span class="chip">${prop.sub} · 2 blades · 5.1 in</span>
+      </div>
+      <canvas id="rig${i}" aria-label="${prop.name} spinning on the rig, with downwash and sound travelling to the microphone"></canvas>
+      <div class="readouts">
+        <div class="readout"><span class="k">Spin</span><span class="v" id="rpm${i}"></span></div>
+        <div class="readout"><span class="k">Tip Mach</span><span class="v" id="mach${i}"></span></div>
+        <div class="readout"><span class="k">Hum note</span><span class="v" id="bpf${i}"></span></div>
+        <div class="readout"><span class="k">Shaft power</span><span class="v" id="pow${i}"></span></div>
+      </div>
+      <div class="level">
+        <div><span class="k eyebrow">Hum at the mic</span><div class="big" id="lvl${i}"></div></div>
+        <div class="meter" aria-hidden="true"><i id="meter${i}" style="background:var(${prop.color})"></i></div>
+      </div>`;
+    return { prop, canvas: $("rig" + i), phase: Math.random() * 6, rings: [], ringClock: 0, drops: [] };
+  });
+
+  // ---- Charts --------------------------------------------------------------
+  const NS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : "–");
+
+  const box = { l: 38, r: 10, t: 10, b: 30, w: 340, h: 230 };
+  const pw = box.w - box.l - box.r, ph = box.h - box.t - box.b;
+
+  function axes(svg, xTicks, yTicks, xs, ys, xLabel, yLabel) {
+    for (const t of yTicks) {
+      svgEl("line", { x1: box.l, x2: box.l + pw, y1: ys(t.v), y2: ys(t.v), class: "gridl" }, svg);
+      svgEl("text", { x: box.l - 6, y: ys(t.v) + 3.5, "text-anchor": "end" }, svg).textContent = t.label;
+    }
+    for (const t of xTicks) {
+      svgEl("text", { x: xs(t.v), y: box.t + ph + 14, "text-anchor": "middle" }, svg).textContent = t.label;
+    }
+    svgEl("line", { x1: box.l, x2: box.l + pw, y1: box.t + ph, y2: box.t + ph, class: "axis" }, svg);
+    svgEl("text", { x: box.l + pw, y: box.h - 2, "text-anchor": "end" }, svg).textContent = xLabel;
+    svgEl("text", { x: 2, y: box.t - 1 }, svg).textContent = yLabel;
+  }
+
+  // Chart A: dB(A) vs thrust
+  const thrustGrid = Array.from({ length: 121 }, (_, i) => 0.5 + i * 0.025);
+  const curves = PROPS.map((p) => ({
+    slip: thrustGrid.map((T) => hum(operatingPoint(p, T), 150).dBA),
+    intake: thrustGrid.map((T) => hum(operatingPoint(p, T), 30).dBA),
+  }));
+  function drawChartA() {
+    const svg = $("chartA"); svg.innerHTML = "";
+    const yMin = 0, yMax = 80;
+    const xs = (T) => box.l + (T - 0.5) / 3 * pw;
+    const ys = (v) => box.t + ph - (Math.min(Math.max(v, yMin), yMax) - yMin) / (yMax - yMin) * ph;
+    axes(svg, [0.5, 1, 1.5, 2, 2.5, 3, 3.5].map((v) => ({ v, label: v.toFixed(1) })),
+         [0, 20, 40, 60, 80].map((v) => ({ v, label: String(v) })), xs, ys, "thrust (N)", "dB(A)");
+    const other = state.side === "slip" ? "intake" : "slip";
+    PROPS.forEach((p, i) => {
+      for (const [side, dash] of [[other, "4 3"], [state.side, ""]]) {
+        const d = curves[i][side].map((v, k) => `${k ? "L" : "M"}${xs(thrustGrid[k]).toFixed(1)},${ys(v).toFixed(1)}`).join("");
+        svgEl("path", { d, fill: "none", stroke: `var(${p.color})`, "stroke-width": side === state.side ? 2.2 : 1.4,
+                        "stroke-dasharray": dash, opacity: side === state.side ? 1 : 0.55 }, svg);
+      }
+    });
+    svgEl("line", { x1: xs(state.T), x2: xs(state.T), y1: box.t, y2: box.t + ph, class: "cursor" }, svg);
+    PROPS.forEach((p, i) => {
+      const v = hum(operatingPoint(p, state.T), SIDES[state.side].theta).dBA;
+      svgEl("circle", { cx: xs(state.T), cy: ys(v), r: 4, fill: `var(${p.color})`, stroke: "var(--sheet)", "stroke-width": 1.5 }, svg);
+    });
+  }
+
+  // Chart B: tone ladder
+  function drawChartB(results) {
+    const svg = $("chartB"); svg.innerHTML = "";
+    const yMin = -40, yMax = 80, fMin = 100, fMax = 10000;
+    const xs = (f) => box.l + Math.log10(f / fMin) / Math.log10(fMax / fMin) * pw;
+    const ys = (v) => box.t + ph - (Math.min(Math.max(v, yMin), yMax) - yMin) / (yMax - yMin) * ph;
+    axes(svg, [100, 300, 1000, 3000, 10000].map((v) => ({ v, label: v >= 1000 ? v / 1000 + "k" : String(v) })),
+         [-40, -20, 0, 20, 40, 60, 80].map((v) => ({ v, label: String(v) })), xs, ys, "frequency (Hz)", "dB(A)");
+    PROPS.forEach((p, i) => {
+      const off = i === 0 ? -2.2 : 2.2;
+      for (const t of results[i].tones) {
+        if (t.LA <= yMin) continue;
+        const x = xs(t.f) + off;
+        svgEl("line", { x1: x, x2: x, y1: ys(yMin), y2: ys(t.LA), stroke: `var(${p.color})`, "stroke-width": 2.4 }, svg);
+        svgEl("circle", { cx: x, cy: ys(t.LA), r: t.m === 1 ? 4 : 3, fill: `var(${p.color})` }, svg);
+      }
+    });
+  }
+
+  // Chart C: push vs twist (signed bars, newtons)
+  function drawChartC(results) {
+    const svg = $("chartC"); svg.innerHTML = "";
+    const rows = [];
+    PROPS.forEach((p, i) => {
+      const r = results[i];
+      rows.push({ label: "push", v: r.push, color: p.color, prop: i });
+      rows.push({ label: "twist", v: r.twist, color: p.color, prop: i });
+      rows.push({ label: "total", v: r.net, color: p.color, prop: i, total: true });
+    });
+    const maxAbs = Math.max(6, ...rows.map((r) => Math.abs(r.v)));
+    const lim = Math.ceil(maxAbs / 2) * 2;
+    const l = 62, rr = 12;
+    const xs = (v) => l + (v + lim) / (2 * lim) * (box.w - l - rr);
+    const rowH = 26, top = 14, gapBetween = 18;
+    const yOf = (k) => top + k * rowH + (k >= 3 ? gapBetween : 0);
+    for (const v of [-lim, -lim / 2, 0, lim / 2, lim]) {
+      svgEl("line", { x1: xs(v), x2: xs(v), y1: top - 6, y2: yOf(5) + rowH - 4, class: v === 0 ? "zero" : "gridl" }, svg);
+      svgEl("text", { x: xs(v), y: box.h - 16, "text-anchor": "middle" }, svg).textContent = (v > 0 ? "+" : "") + v;
+    }
+    svgEl("text", { x: box.w - rr, y: box.h - 2, "text-anchor": "end" }, svg).textContent = "newtons";
+    rows.forEach((r, k) => {
+      const y = yOf(k);
+      const x0 = xs(0), x1 = xs(r.v);
+      svgEl("rect", { x: Math.min(x0, x1), y: y, width: Math.max(1, Math.abs(x1 - x0)), height: rowH - 9,
+                      fill: `var(${r.color})`, opacity: r.total ? 1 : 0.45, rx: 2 }, svg);
+      const t = svgEl("text", { x: l - 8, y: y + rowH / 2 - 1, "text-anchor": "end" }, svg);
+      t.textContent = (k % 3 === 0 ? (r.prop === 0 ? "5152 " : "LR ") : "") + r.label;
+      if (r.total) t.setAttribute("style", "fill:var(--ink);font-weight:500");
+    });
+  }
+
+  function legends() {
+    const sideName = SIDES[state.side].label.toLowerCase(), otherName = state.side === "slip" ? "intake" : "slipstream";
+    $("legendA").innerHTML = PROPS.map((p) => `<span><i style="border-color:var(${p.color})"></i>${p.name.replace("Gemfan ", "")}, ${sideName}</span>`).join("")
+      + `<span><i class="dash" style="border-color:var(--muted)"></i>${otherName} side</span>`;
+    $("legendB").innerHTML = PROPS.map((p) => `<span><i style="border-color:var(${p.color})"></i>${p.name.replace("Gemfan ", "")}</span>`).join("");
+    $("legendC").innerHTML = `<span>faint bars: push and twist</span><span>solid bar: total that makes the sound</span>`;
+  }
+
+  // ---- Update loop for numbers --------------------------------------------
+  let current = null;
+  function update() {
+    const theta = SIDES[state.side].theta;
+    const ops = PROPS.map((p) => operatingPoint(p, state.T));
+    const results = ops.map((op) => hum(op, theta));
+    current = { ops, results };
+    $("thrustVal").innerHTML = `${state.T.toFixed(2)}<small>N</small>`;
+    ops.forEach((op, i) => {
+      $("rpm" + i).innerHTML = `${Math.round(op.rpm).toLocaleString("en-US")}<small>rpm</small>`;
+      $("mach" + i).textContent = op.mach.toFixed(3);
+      $("bpf" + i).innerHTML = `${Math.round(op.bpf)}<small>Hz</small>`;
+      $("pow" + i).innerHTML = `${op.P.toFixed(1)}<small>W</small>`;
+      const lvl = results[i].dBA;
+      $("lvl" + i).innerHTML = `${fmt(Math.max(lvl, -99))}<small>dB(A)</small>`;
+      $("meter" + i).style.width = `${Math.min(100, Math.max(0, lvl / 80 * 100))}%`;
+    });
+    const gap = results[1].dBA - results[0].dBA;
+    const v = $("verdict");
+    if (gap > 0) {
+      v.classList.remove("wrong");
+      $("verdictPill").textContent = "Same order as Empa";
+      $("verdictText").textContent = `At ${state.T.toFixed(2)} N the high-pitch 5152 is ${gap.toFixed(1)} dB(A) quieter than the low-pitch LR5126-2. Empa measured about 5 dB. The LR5126-2 must spin ${((ops[1].rpm / ops[0].rpm - 1) * 100).toFixed(0)}% faster for the same push, and hum grows very steeply with tip speed.`;
+    } else {
+      v.classList.add("wrong");
+      $("verdictPill").textContent = "Opposite of Empa";
+      $("verdictText").textContent = `At ${state.T.toFixed(2)} N on the intake side the model has the 5152 ${(-gap).toFixed(1)} dB(A) louder. Empa found it about 5 dB quieter, but Empa's mic is in the slipstream. Here push and twist cancel, which makes the result unreliable.`;
+    }
+    $("sideHint").textContent = SIDES[state.side].hint;
+    drawChartA(); drawChartB(results); drawChartC(results); legends();
+    updateAudio();
+    if (reduceMotion.matches) drawRigs(0);
+  }
+
+  // ---- Rig drawing ----------------------------------------------------------
+  const SLOW = 100;   // blades drawn 100x slower than real
+  function sizeCanvas(c) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const ctx = c.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w, h };
+  }
+
+  function drawRig(pan, i, dt) {
+    if (!current) return;
+    const { ctx, w, h } = sizeCanvas(pan.canvas);
+    const op = current.ops[i], res = current.results[i];
+    const col = colors[pan.prop.color], ink = colors["--ink"], muted = colors["--muted"], rule = colors["--rule"], sig = colors["--signal"];
+    const slip = state.side === "slip";
+    ctx.clearRect(0, 0, w, h);
+
+    // geometry: rotor plane horizontal, thrust up, mic at 60 deg from the plane
+    const cx = Math.min(w * 0.3, 150), cy = h * 0.5;
+    const L = Math.min((h / 2 - 26) / Math.sin(Math.PI / 3), (w - cx - 40) / Math.cos(Math.PI / 3));
+    const mic = { x: cx + L * 0.5, y: cy + (slip ? 1 : -1) * L * Math.sin(Math.PI / 3) };
+    const Rp = Math.min(L * 0.3, cx - 18);
+
+    // phase advance
+    pan.phase += dt * (op.rpm / 60 / SLOW) * 2 * Math.PI;
+
+    // downwash particles (air pushed down at the induced speed)
+    const vpx = op.vi * 7;
+    pan.dropClock = (pan.dropClock || 0) + dt;
+    while (pan.dropClock > 0.05) { pan.dropClock -= 0.05; pan.drops.push({ x: cx + (Math.random() * 2 - 1) * Rp * 0.85, y: cy + 6 }); }
+    ctx.strokeStyle = muted; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.5;
+    pan.drops = pan.drops.filter((d) => (d.y += vpx * dt) < h + 10);
+    for (const d of pan.drops) { ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y + 7); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+
+    // sound rings: one per hum period (scaled), brightness from the level
+    const strength = Math.max(0, Math.min(1, res.dBA / 75));
+    pan.ringClock += dt;
+    const period = 120 / op.bpf;              // seconds between rings on screen
+    while (pan.ringClock > period) { pan.ringClock -= period; pan.rings.push({ r: Rp * 0.3 }); }
+    const maxR = Math.hypot(w, h);
+    pan.rings = pan.rings.filter((rg) => (rg.r += 70 * dt) < maxR);
+    ctx.lineWidth = 1.6;
+    for (const rg of pan.rings) {
+      ctx.globalAlpha = strength * 0.55 * Math.max(0, 1 - rg.r / (L * 1.4));
+      ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(cx, cy, rg.r, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // line to mic and angle
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = sig; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(mic.x, mic.y); ctx.stroke();
+    ctx.strokeStyle = rule; ctx.beginPath(); ctx.moveTo(cx + Rp + 4, cy); ctx.lineTo(w - 10, cy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = sig; ctx.beginPath();
+    const a0 = 0, a1 = (slip ? 1 : -1) * Math.PI / 3;
+    ctx.arc(cx, cy, Math.min(L * 0.42, 70), Math.min(a0, a1), Math.max(a0, a1)); ctx.stroke();
+    ctx.fillStyle = sig; ctx.font = `500 11px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+    const lab = Math.min(L * 0.42, 70) + 8;
+    ctx.fillText("60°", cx + lab * Math.cos(a1 / 2), cy + lab * Math.sin(a1 / 2) + 4);
+
+    // thrust arrow
+    const tl = 16 + op.T * 12;
+    ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy - 10 - tl); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - 16 - tl); ctx.lineTo(cx - 5, cy - 8 - tl); ctx.lineTo(cx + 5, cy - 8 - tl); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = muted; ctx.font = `11px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+    ctx.fillText(`thrust ${op.T.toFixed(2)} N`, cx + 8, cy - 14 - tl * 0.6);
+
+    // motor + mount
+    ctx.fillStyle = muted; ctx.globalAlpha = 0.8;
+    ctx.fillRect(cx - 9, cy + 3, 18, 16);
+    ctx.fillRect(cx - 2.5, cy + 19, 5, h - cy - 19);
+    ctx.globalAlpha = 1;
+
+    // rotor, side view: blade tips swing across as it turns
+    const c1 = Math.cos(pan.phase);
+    ctx.strokeStyle = rule; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - Rp, cy); ctx.lineTo(cx + Rp, cy); ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(cx - Rp * c1, cy - 1); ctx.lineTo(cx + Rp * c1, cy + 1); ctx.stroke();
+    ctx.lineCap = "butt";
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
+
+    // microphone
+    const glow = 6 + strength * 10;
+    ctx.fillStyle = sig; ctx.globalAlpha = 0.18 + strength * 0.25;
+    ctx.beginPath(); ctx.arc(mic.x, mic.y, glow, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(mic.x, mic.y, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ink; ctx.font = `500 11px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+    const ty = mic.y + (slip ? -12 : 20);
+    ctx.textAlign = "right";
+    ctx.fillText(`mic · 1 m · θ = ${SIDES[state.side].theta}°`, Math.min(w - 8, mic.x + 60), ty);
+    ctx.textAlign = "left";
+
+    // top view inset
+    const ix = w - 50, iy = 48, ir = 34;
+    ctx.strokeStyle = rule; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(ix, iy, ir + 4, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = col;
+    for (let b = 0; b < 2; b++) {
+      const a = pan.phase + b * Math.PI;
+      ctx.save(); ctx.translate(ix, iy); ctx.rotate(a);
+      ctx.beginPath(); ctx.moveTo(0, -3); ctx.quadraticCurveTo(ir * 0.45, -8, ir, -2); ctx.lineTo(ir, 2); ctx.quadraticCurveTo(ir * 0.45, 5, 0, 3); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(ix, iy, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = muted; ctx.font = `10px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+    ctx.textAlign = "center"; ctx.fillText(`top view · ${SLOW}× slower`, ix, iy + ir + 18); ctx.textAlign = "left";
+
+    // corner note
+    ctx.fillText("side view · not to scale", 10, h - 10);
+  }
+
+  function drawRigs(dt) { panels.forEach((p, i) => drawRig(p, i, dt)); }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!reduceMotion.matches) drawRigs(dt);
+    requestAnimationFrame(frame);
+  }
+
+  // ---- Audio ------------------------------------------------------------------
+  let audio = null;
+  function ensureAudio() {
+    if (audio) return audio;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    const ctx = new Ctx();
+    const master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+    const voices = Array.from({ length: 10 }, () => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = 200; g.gain.value = 0; o.connect(g).connect(master); o.start();
+      return { o, g };
+    });
+    audio = { ctx, master, voices };
+    return audio;
+  }
+  function updateAudio() {
+    if (!audio || !current) return;
+    const t = audio.ctx.currentTime;
+    const on = state.listen >= 0;
+    audio.master.gain.setTargetAtTime(on ? state.volume * 0.5 : 0, t, 0.05);
+    if (!on) return;
+    const tones = current.results[state.listen].tones;
+    // keep real level differences: 75 dB maps to a fixed loudness, quieter tones scale down
+    tones.forEach((tn, k) => {
+      const amp = Math.min(0.6, 0.3 * (tn.p / (PREF * 10 ** (75 / 20))));
+      audio.voices[k].o.frequency.setTargetAtTime(Math.min(tn.f, 20000), t, 0.03);
+      audio.voices[k].g.gain.setTargetAtTime(Number.isFinite(amp) ? amp : 0, t, 0.05);
+    });
+  }
+  function setListen(v) {
+    state.listen = v;
+    ["listenOff", "listenP0", "listenP1"].forEach((id, k) => $(id).setAttribute("aria-pressed", String(k - 1 === v)));
+    if (v >= 0) { const a = ensureAudio(); if (a && a.ctx.state === "suspended") a.ctx.resume().catch(() => {}); }
+    updateAudio();
+  }
+
+  // ---- Wiring -------------------------------------------------------------------
+  $("thrust").addEventListener("input", (e) => { state.T = parseFloat(e.target.value); update(); });
+  $("sideSlip").addEventListener("click", () => { state.side = "slip"; $("sideSlip").setAttribute("aria-pressed", "true"); $("sideIntake").setAttribute("aria-pressed", "false"); update(); });
+  $("sideIntake").addEventListener("click", () => { state.side = "intake"; $("sideIntake").setAttribute("aria-pressed", "true"); $("sideSlip").setAttribute("aria-pressed", "false"); update(); });
+  $("listenOff").addEventListener("click", () => setListen(-1));
+  $("listenP0").addEventListener("click", () => setListen(0));
+  $("listenP1").addEventListener("click", () => setListen(1));
+  $("volume").addEventListener("input", (e) => { state.volume = parseFloat(e.target.value); updateAudio(); });
+
+  const refreshTheme = () => { readColors(); if (reduceMotion.matches) drawRigs(0); };
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshTheme);
+  new MutationObserver(refreshTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  reduceMotion.addEventListener("change", () => drawRigs(0));
+  window.addEventListener("resize", () => drawRigs(0));
+
+  state.T = parseFloat($("thrust").value) || 2.0;
+  readColors();
+  update();
+  drawRigs(0.016);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
