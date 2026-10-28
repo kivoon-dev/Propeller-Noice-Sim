@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased: Empa microphone side confirmed
+- Empa's mic is on the slipstream side, 60° below the rotor plane (Meister et
+  al. 2026, Section 3.2, Fig. 8): θ = 150° in Gutin's convention, not 30°.
+  `EMPA_THETA_DEG` changed to 150; r = 1 m kept (Empa scaled 1.4 m to 1 m).
+- The two xfails are removed because both tests now pass: dB(A) rises with
+  thrust for both props, and the 5152 is quieter by +6.5 to +6.7 dB(A)
+  (Empa: about 5). Not tuned; θ comes from the paper.
+- New test: slipstream side (150°) is louder than intake side (30°).
+- `run_m2.py` uses 150° for results and shows 30° as the comparison.
+- PRD scope, milestone table and Gutin section now say θ = 150° clearly.
+
 ## v0.2-m2 (2026-10-28): hum model
 - Gutin tonal model for BPF harmonics m = 1..10 at 1 m (`gutin.py`), checked
   against Gutin 1936 / Goldstein 1976 (from memory; scans not readable).

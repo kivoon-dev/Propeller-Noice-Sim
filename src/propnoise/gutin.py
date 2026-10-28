@@ -31,7 +31,8 @@ Angle convention (important): θ is measured from the propeller axis on the side
 the thrust points to (upstream, the side air is sucked in from). On that side
 the thrust and torque terms have opposite signs and partly cancel. On the
 downstream side (θ > 90°) cosθ < 0 and the two terms add. Gutin's hum is
-therefore loudest a little behind the propeller plane.
+therefore loudest a little behind the propeller plane. Empa's microphone is on
+the downstream side (θ = 150°, see EMPA_THETA_DEG).
 """
 
 from dataclasses import dataclass
@@ -47,12 +48,17 @@ P_REF = 20e-6               # Pa, reference pressure for dB in air
 # choice; the real loading is spread along the blade).
 RE_FRACTION = 0.8
 
-# ASSUMPTION: Empa's microphone sits 1 m away, 60 deg from the propeller plane,
-# on the upstream (thrust) side, i.e. theta = 30 deg from the axis. The paper's
-# setup section could not be checked when this was written; if the mic is on the
-# wake side, use theta = 150 deg (scripts/run_m2.py prints both).
+# Empa's microphone (Meister et al. 2026, Section 3.2, Fig. 8) is on the
+# downwash/slipstream side, 60 deg below the rotor plane, i.e. 30 deg from the
+# downstream axis. In Gutin's convention (theta from the thrust direction) that
+# is theta = 150 deg: cos(theta) < 0, so the thrust and torque terms add.
+# sin(theta) = 0.5 as at 30 deg, so the Bessel argument is the same.
+# Empa measured at 1.4 m and scaled to 1 m, so r = 1 m matches their numbers.
 EMPA_DISTANCE_M = 1.0
-EMPA_THETA_DEG = 30.0
+EMPA_THETA_DEG = 150.0
+
+# The intake side at the same angle from the plane, kept for comparison.
+INTAKE_THETA_DEG = 30.0
 
 N_HARMONICS = 10
 

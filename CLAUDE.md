@@ -39,7 +39,7 @@ technical name. Keep code readable over clever.
 | Tag | What | Status |
 |---|---|---|
 | v0.1-m1 | Spin speed, hum frequency, power, figure of merit | done |
-| v0.2-m2 | Tonal noise at 1 m, 60 deg (Gutin), SPL in dB(A) | done (Empa check xfail) |
+| v0.2-m2 | Tonal noise at 1 m, 60 deg below rotor, theta = 150 (Gutin), dB(A) | done |
 | v0.3-m3 | Blade-spacing study: 2 vs 4 even vs 4 uneven blades | next |
 | v0.4-m4 | WAV synthesis + loudness, sharpness, annoyance (MoSQITo, ISO 532-1) | |
 | v0.5-m5 | Same scores on Empa's real data, if shared | |
@@ -52,6 +52,6 @@ technical name. Keep code readable over clever.
 - Airfoil data is generic low-Reynolds; FM does not change with RPM in this model.
 - Tonal model only: broadband noise (where Empa found the toroidal differences,
   above 2-4 kHz) is not modelled. This is the biggest gap.
-- Gutin lumps blade forces at 0.8 R. Upstream (theta = 30 deg) the thrust and
-  torque terms cancel; for the 5152 near 2.5 N the hum nearly vanishes. Which
-  side Empa's mic was on is still unconfirmed.
+- Gutin lumps blade forces at 0.8 R. On the intake side (theta = 30 deg) the
+  thrust and torque terms cancel; for the 5152 near 2.5 N the hum nearly
+  vanishes. Empa's mic is on the slipstream side (theta = 150 deg), where they add.

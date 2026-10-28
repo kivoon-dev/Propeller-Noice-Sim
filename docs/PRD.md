@@ -19,7 +19,8 @@ may agree.
 
 ## Scope
 In: Gemfan 5152 (high pitch) and LR5126-2 (low pitch), 2-blade, 5.1 in; thrust
-0.5 to 3.5 N in hover; microphone at 1 m, 60° from the propeller plane; a
+0.5 to 3.5 N in hover; microphone at 1 m, 60° below the propeller plane on the
+slipstream side (Empa measured at 1.4 m and scaled to 1 m); a
 blade-spacing study (2 vs 4 even vs 4 uneven); loudness and annoyance scores;
 Empa's measured data if shared.
 
@@ -30,7 +31,7 @@ room echoes; exact dB values (the goal is the ranking).
 | # | Plain words | Technical | Tag |
 |---|---|---|---|
 | 1 | How fast must each prop spin for each thrust | Hover BEMT, Prandtl tip loss; RPM, tip Mach, BPF, power, FM | v0.1-m1 |
-| 2 | Predict the hum at the microphone | Gutin tonal model, harmonics m = 1..10, r = 1 m, θ = 30° from axis; dB and dB(A) | v0.2-m2 |
+| 2 | Predict the hum at the microphone | Gutin tonal model, harmonics m = 1..10, r = 1 m, θ = 150° from the thrust direction (mic 60° below the rotor plane, slipstream side); dB and dB(A) | v0.2-m2 |
 | 3 | Why an uneven 4-blade (like the Donut) sounds different | Sum tones for 2, 4 even, 4 uneven blades; shaft-order tones | v0.3-m3 |
 | 4 | Turn each prediction into audio and score it | WAV synthesis + labelled broadband floor; dB(A), Zwicker loudness (ISO 532-1), sharpness, annoyance via MoSQITo | v0.4-m4 |
 | 5 | Score Empa's real recordings (stretch) | Same metrics on Empa spectra/audio if shared | v0.5-m5 |
@@ -42,6 +43,13 @@ p_m = (m B Ω / (2√2 π c₀ r)) · | T cosθ − Q c₀ / (Ω R_e²) | · J_m
 
 B = blades, Ω = rad/s, c₀ = speed of sound, R_e ≈ 0.8 R, J = Bessel function.
 Check the exact form against a textbook source before coding.
+
+Angle: θ is measured from the forward thrust direction (Gutin's convention).
+Empa's microphone (Meister et al. 2026, Section 3.2, Fig. 8) is on the
+downwash/slipstream side, 60° below the rotor plane, i.e. 30° from the
+downstream axis, so **θ = 150°**. There cos θ < 0 and the thrust and torque
+terms add. sin θ = 0.5, the same as at 30°, so the Bessel argument does not
+change. θ = 30° would be the intake side, where the two terms partly cancel.
 
 ## Output CSV columns
 prop, thrust_N, rpm, tip_mach, bpf_Hz, power_W (M1); spl_dBA (M2);

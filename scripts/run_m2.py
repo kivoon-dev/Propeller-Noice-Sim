@@ -3,9 +3,10 @@
 Run from the repo root:  python scripts/run_m2.py
 Writes results/m2_hum.csv and two charts.
 
-The main results use theta = 30 deg from the axis (upstream side, see the
-ASSUMPTION in gutin.py). The wake side (theta = 150 deg) is printed and drawn as
-a dashed line so the effect of that assumption is visible.
+Main results use Empa's microphone position: 1 m, 60 deg below the rotor plane
+on the slipstream side, theta = 150 deg in Gutin's convention (Meister et al.
+2026, Section 3.2, Fig. 8). The intake side (theta = 30 deg) is printed and
+drawn as a dashed line for comparison.
 """
 
 import csv
@@ -23,37 +24,36 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 from propnoise import EMPA_THRUSTS_N  # noqa: E402
 from propnoise.bemt import sweep  # noqa: E402
-from propnoise.gutin import EMPA_THETA_DEG, tone_spectrum  # noqa: E402
+from propnoise.gutin import EMPA_THETA_DEG, INTAKE_THETA_DEG, tone_spectrum  # noqa: E402
 from propnoise.props import GEMFAN_5152, GEMFAN_LR5126, PROPELLERS  # noqa: E402
 
 RESULTS = ROOT / "results"
 COLORS = {"Gemfan 5152 (high pitch)": "#2a6fdb", "Gemfan LR5126-2 (low pitch)": "#e0702b"}
-WAKE_THETA_DEG = 150.0
 SPECTRUM_THRUST_N = 2.0
 
 
 def main():
     RESULTS.mkdir(exist_ok=True)
     rows = []
-    wake = {}
+    intake = {}
     for prop in PROPELLERS:
         print(f"\n{prop.name}")
-        print(f"  thrust   dB    dB(A)   | wake side (theta {WAKE_THETA_DEG:.0f}): dB(A)")
-        wake[prop.name] = []
+        print(f"  thrust   dB    dB(A)   | intake side (theta {INTAKE_THETA_DEG:.0f}): dB(A)")
+        intake[prop.name] = []
         for op in sweep(prop, EMPA_THRUSTS_N):
             s = tone_spectrum(op, prop)
-            w = tone_spectrum(op, prop, theta_deg=WAKE_THETA_DEG)
-            wake[prop.name].append(w.total_dBA)
+            up = tone_spectrum(op, prop, theta_deg=INTAKE_THETA_DEG)
+            intake[prop.name].append(up.total_dBA)
             rows.append({**asdict(op), "spl_dB": s.total_dB, "spl_dBA": s.total_dBA})
-            print(f"  {op.thrust_N:.1f} N  {s.total_dB:5.1f}  {s.total_dBA:5.1f}   | {w.total_dBA:5.1f}")
+            print(f"  {op.thrust_N:.1f} N  {s.total_dB:5.1f}  {s.total_dBA:5.1f}   | {up.total_dBA:5.1f}")
 
     print("\nEmpa check: LR5126-2 minus 5152 in dB(A) at the same thrust (Empa: about +5)")
     hi = [r for r in rows if r["prop_name"] == GEMFAN_5152.name]
     lo = [r for r in rows if r["prop_name"] == GEMFAN_LR5126.name]
     for i, (h, l) in enumerate(zip(hi, lo)):
-        wake_gap = wake[GEMFAN_LR5126.name][i] - wake[GEMFAN_5152.name][i]
-        print(f"  {h['thrust_N']:.1f} N  theta {EMPA_THETA_DEG:.0f}: {l['spl_dBA'] - h['spl_dBA']:+6.1f}   "
-              f"theta {WAKE_THETA_DEG:.0f}: {wake_gap:+5.1f}")
+        intake_gap = intake[GEMFAN_LR5126.name][i] - intake[GEMFAN_5152.name][i]
+        print(f"  {h['thrust_N']:.1f} N  theta {EMPA_THETA_DEG:.0f}: {l['spl_dBA'] - h['spl_dBA']:+5.1f}   "
+              f"(intake side, theta {INTAKE_THETA_DEG:.0f}: {intake_gap:+6.1f})")
 
     out = RESULTS / "m2_hum.csv"
     with out.open("w", newline="") as f:
@@ -69,9 +69,9 @@ def main():
         pts = [r for r in rows if r["prop_name"] == prop.name]
         thrusts = [r["thrust_N"] for r in pts]
         ax.plot(thrusts, [r["spl_dBA"] for r in pts], "o-", color=COLORS[prop.name],
-                label=f"{prop.name}, θ = {EMPA_THETA_DEG:.0f}°")
-        ax.plot(thrusts, wake[prop.name], "--", color=COLORS[prop.name], alpha=0.6,
-                label=f"wake side, θ = {WAKE_THETA_DEG:.0f}°")
+                label=f"{prop.name}, Empa mic (θ = {EMPA_THETA_DEG:.0f}°)")
+        ax.plot(thrusts, intake[prop.name], "--", color=COLORS[prop.name], alpha=0.6,
+                label=f"same prop, intake side (θ = {INTAKE_THETA_DEG:.0f}°)")
     ax.set_xlabel("Thrust (N)")
     ax.set_ylabel("Hum level at 1 m, dB(A)")
     ax.grid(alpha=0.3)

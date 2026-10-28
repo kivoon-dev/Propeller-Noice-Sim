@@ -3,7 +3,7 @@
 Same two kinds of test as Milestone 1: physics sanity, and Empa orderings.
 If an Empa check fails, it is marked xfail with the honest reason. Do NOT
 change theta, R_e or the geometry to make it pass; that would be fitting the
-answer.
+answer. (theta = 150 deg comes from Empa's setup, Section 3.2 / Fig. 8.)
 """
 
 import numpy as np
@@ -11,15 +11,9 @@ import pytest
 
 from propnoise import EMPA_THRUSTS_N
 from propnoise.bemt import operating_point, solve_hover, sweep
-from propnoise.gutin import a_weighting_dB, harmonic_pressures, tone_spectrum
+from propnoise.gutin import (INTAKE_THETA_DEG, a_weighting_dB, harmonic_pressures,
+                             tone_spectrum)
 from propnoise.props import GEMFAN_5152, GEMFAN_LR5126, PROPELLERS
-
-UPSTREAM_CANCELLATION = (
-    "At theta = 30 deg (upstream side) Gutin's thrust term T cos(theta) and torque "
-    "term Q c0/(Omega Re^2) have opposite signs. For the 5152 they cancel almost "
-    "exactly near 2.5 N (2 dB(A)), because the model puts all blade force at one "
-    "radius. Not tuned away. On the wake side (theta = 150 deg) this test passes."
-)
 
 
 @pytest.fixture(scope="module", params=PROPELLERS, ids=lambda p: p.name.split()[1])
@@ -56,27 +50,28 @@ def test_fundamental_sits_at_milestone_1_bpf(prop_and_solution):
     np.testing.assert_allclose(s.freqs_Hz, op.bpf_Hz * np.arange(1, 11))
 
 
-@pytest.mark.parametrize("prop", [
-    pytest.param(GEMFAN_5152, id="5152",
-                 marks=pytest.mark.xfail(reason=UPSTREAM_CANCELLATION, strict=True)),
-    pytest.param(GEMFAN_LR5126, id="LR5126-2"),
-])
+@pytest.mark.parametrize("prop", PROPELLERS, ids=lambda p: p.name.split()[1])
 def test_louder_as_thrust_increases(prop):
     levels = [tone_spectrum(op, prop).total_dBA for op in sweep(prop, EMPA_THRUSTS_N)]
     assert np.all(np.diff(levels) > 0), f"dB(A) vs thrust: {np.round(levels, 1)}"
 
 
+@pytest.mark.parametrize("prop", PROPELLERS, ids=lambda p: p.name.split()[1])
+def test_slipstream_side_is_louder_than_intake_side(prop):
+    """Gutin: below the rotor (150 deg) thrust and torque terms add; above (30 deg)
+    they partly cancel. Same sin(theta), so only the loading bracket differs."""
+    for op in sweep(prop, EMPA_THRUSTS_N):
+        slipstream = tone_spectrum(op, prop).total_dBA
+        intake = tone_spectrum(op, prop, theta_deg=INTAKE_THETA_DEG).total_dBA
+        assert slipstream > intake, f"{op.thrust_N} N: {slipstream:.1f} vs {intake:.1f} dB(A)"
+
+
 # ---- Empa checks ----------------------------------------------------------
 
-@pytest.mark.xfail(strict=True, reason=(
-    "Empa: 5152 about 5 dB(A) quieter than LR5126-2. Model at theta = 30 deg: "
-    "gap is -9.5 dB(A) at 0.5 N (wrong way), +0.6 at 1.0 N, then +11 to +53 "
-    "(far too big) from 1.5 N up, all caused by the upstream thrust/torque "
-    "cancellation. Wake side (theta = 150 deg) gives +6.5 to +6.7 at every thrust, "
-    "but the mic side is not yet confirmed from the paper, so it is not used here."))
 def test_high_pitch_is_quieter_in_dBA_at_same_thrust():
+    """Empa: the 5152 is about 5 dB(A) quieter than the LR5126-2 at the same thrust."""
     hi = [tone_spectrum(op, GEMFAN_5152).total_dBA for op in sweep(GEMFAN_5152, EMPA_THRUSTS_N)]
     lo = [tone_spectrum(op, GEMFAN_LR5126).total_dBA for op in sweep(GEMFAN_LR5126, EMPA_THRUSTS_N)]
     gap = np.array(lo) - np.array(hi)
-    print("LR5126-2 minus 5152, dB(A):", dict(zip(EMPA_THRUSTS_N, np.round(gap, 1))))
+    print("LR5126-2 minus 5152, dB(A):", dict(zip(EMPA_THRUSTS_N, np.round(gap, 1).tolist())))
     assert np.all(gap > 0), f"gap by thrust: {np.round(gap, 1)}"
