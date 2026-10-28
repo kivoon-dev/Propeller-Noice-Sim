@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.ipynb_checkpoints/
+.DS_Store
+# Large audio files: regenerate with the scripts instead of committing
+results/*.wav
