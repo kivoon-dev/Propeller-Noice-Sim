@@ -13,12 +13,13 @@ Built by Loonweewat Tan to understand the physics behind propellers. Plan: [`doc
 
 ```bash
 pip install -r requirements.txt
-python scripts/run_m1.py     # results go to results/
+python scripts/run_m1.py     # spin speed; results go to results/
+python scripts/run_m2.py     # hum level in dB(A)
 pytest                       # checks the physics and Empa's findings
 ```
 
 On Google Colab: `!git clone <this repo URL>`, `%cd propeller-noise-sim`, then the
-same two commands with `!` in front.
+same commands with `!` in front.
 
 ## Results so far (Milestone 1)
 
@@ -36,6 +37,35 @@ prop spins faster (so its hum is higher) and is more efficient.
 The orderings are the trustworthy part until the real blades are measured.
 
 ![RPM vs thrust](results/m1_rpm_vs_thrust.png)
+
+## Results so far (Milestone 2: the hum)
+
+Hum level at 1 m, Gutin tones m = 1..10, in dB(A):
+
+| Thrust | 5152, θ = 30° | LR5126-2, θ = 30° | 5152, wake side θ = 150° | LR5126-2, wake side θ = 150° |
+|---|---|---|---|---|
+| 0.5 N | 12.5 | 3.0 | 20.9 | 27.4 |
+| 2.0 N | 28.0 | 48.9 | 53.3 | 60.0 |
+| 2.5 N | **2.2** | 55.4 | 58.4 | 65.1 |
+| 3.5 N | 44.7 | 64.8 | 66.1 | 72.8 |
+
+**Empa check: not passed (marked `xfail`, not tuned).** Empa measured the
+high-pitch 5152 about 5 dB(A) quieter. At the planned angle (θ = 30° from the
+axis, on the side the thrust points to), the model's "push" and "twist" noise
+cancel each other for the 5152, almost perfectly near 2.5 N. So the gap swings
+from −9.5 dB(A) (wrong way) at 0.5 N to +53 dB(A) at 2.5 N. On the wake side
+(θ = 150°) the two add instead, and the LR5126-2 is louder by **+6.5 to +6.7
+dB(A) at every thrust**, close to Empa's 5 dB.
+
+Next step: check in the paper which side of the propeller Empa's microphone was
+on. That is a fact to look up, not a knob to turn.
+
+Why the low-pitch prop is louder: it must spin about 33% faster for the same
+thrust. Hum strength grows very steeply with blade-tip speed (through the Bessel
+term), and the faster hum also sits where ears are more sensitive, so A-weighting
+cuts it less.
+
+![dB(A) vs thrust](results/m2_dBA_vs_thrust.png)
 
 ## Checkpoints: how to go back if something breaks
 
@@ -58,7 +88,7 @@ Rule of thumb: commit small and often, tag only when the tests pass.
 | Tag | Milestone |
 |---|---|
 | v0.1-m1 ✅ | Spin speed, hum frequency, power, efficiency |
-| v0.2-m2 | Tonal noise level at 1 m, 60° (Gutin model), dB(A) |
+| v0.2-m2 ✅ | Tonal noise level at 1 m, 60° (Gutin model), dB(A); Empa check open |
 | v0.3-m3 | Blade-spacing study: 2 vs 4 even vs 4 uneven blades |
 | v0.4-m4 | Sound files + loudness, sharpness, annoyance (ISO 532-1) |
 | v0.5-m5 | Score Empa's real recordings, if shared |
@@ -66,4 +96,6 @@ Rule of thumb: commit small and often, tag only when the tests pass.
 
 ## Known limitations
 See `CLAUDE.md`. The biggest one: only the tonal hum is modelled, not broadband
-"hiss", which is where Empa found the toroidal propeller differs.
+"hiss", which is where Empa found the toroidal propeller differs. Gutin also
+puts all blade force at one radius (80%), which is why the upstream cancellation
+comes out unrealistically deep.

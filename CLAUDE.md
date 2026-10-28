@@ -31,14 +31,16 @@ technical name. Keep code readable over clever.
 - `src/propnoise/airfoil.py`: lift/drag model
 - `src/propnoise/bemt.py`: Milestone 1, spin speed from thrust (hover BEMT)
 - `scripts/run_m1.py`: writes `results/m1_spin_speed.csv` and charts
+- `src/propnoise/gutin.py`: Milestone 2, tonal hum (Gutin) and A-weighting
+- `scripts/run_m2.py`: writes `results/m2_hum.csv` and charts
 - `tests/`: physics sanity checks + Empa ordering checks
 
 ## Milestones
 | Tag | What | Status |
 |---|---|---|
 | v0.1-m1 | Spin speed, hum frequency, power, figure of merit | done |
-| v0.2-m2 | Tonal noise at 1 m, 60 deg (Gutin), SPL in dB(A) | next |
-| v0.3-m3 | Blade-spacing study: 2 vs 4 even vs 4 uneven blades | |
+| v0.2-m2 | Tonal noise at 1 m, 60 deg (Gutin), SPL in dB(A) | done (Empa check xfail) |
+| v0.3-m3 | Blade-spacing study: 2 vs 4 even vs 4 uneven blades | next |
 | v0.4-m4 | WAV synthesis + loudness, sharpness, annoyance (MoSQITo, ISO 532-1) | |
 | v0.5-m5 | Same scores on Empa's real data, if shared | |
 | v0.6-m6 | Virtual rig: 3D model writing the Arduino CSV columns | |
@@ -50,3 +52,6 @@ technical name. Keep code readable over clever.
 - Airfoil data is generic low-Reynolds; FM does not change with RPM in this model.
 - Tonal model only: broadband noise (where Empa found the toroidal differences,
   above 2-4 kHz) is not modelled. This is the biggest gap.
+- Gutin lumps blade forces at 0.8 R. Upstream (theta = 30 deg) the thrust and
+  torque terms cancel; for the 5152 near 2.5 N the hum nearly vanishes. Which
+  side Empa's mic was on is still unconfirmed.
