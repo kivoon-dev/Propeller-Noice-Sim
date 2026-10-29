@@ -32,7 +32,7 @@ room echoes; exact dB values (the goal is the ranking).
 |---|---|---|---|
 | 1 | How fast must each prop spin for each thrust | Hover BEMT, Prandtl tip loss; RPM, tip Mach, BPF, power, FM | v0.1-m1 |
 | 2 | Predict the hum at the microphone | Gutin tonal model, harmonics m = 1..10, r = 1 m, θ = 150° from the thrust direction (mic 60° below the rotor plane, slipstream side); dB and dB(A) | v0.2-m2 |
-| 3 | Why an uneven 4-blade (like the Donut) sounds different | Sum tones for 2, 4 even, 4 uneven blades; shaft-order tones | v0.3-m3 |
+| 3 | Why an uneven 4-blade (like the Donut) sounds different | Sum one blade's Gutin tone over the blades at every shaft order, with blade angles and loading weights; 2, 4 even, 4 uneven, and +5% loading on one blade, at 2.0 N | v0.3-m3 |
 | 4 | Turn each prediction into audio and score it | WAV synthesis + labelled broadband floor; dB(A), Zwicker loudness (ISO 532-1), sharpness, annoyance via MoSQITo | v0.4-m4 |
 | 5 | Score Empa's real recordings (stretch) | Same metrics on Empa spectra/audio if shared | v0.5-m5 |
 | 6 | Virtual rig (later) | 3D model + animated throttle sweep writing the Arduino CSV columns | v0.6-m6 |
@@ -61,7 +61,7 @@ thrust_N and power_W match the rig's Arduino log.
 |---|---|---|
 | 1 | Low-pitch prop needs the highest RPM at every thrust | Empa: low-pitch BPF sits higher |
 | 2 | High-pitch prop quieter in dB(A) | Empa: about 5 dB quieter |
-| 3 | Uneven 4-blade shows extra tones even spacing doesn't | Empa: Donut has strongest shaft-frequency tone |
+| 3 | A shaft-frequency (n = 1) tone appears only when half-turn symmetry is broken | Empa: Donut has strongest shaft-frequency tone |
 | 4 | dB(A) and annoyance rankings both reported; hypothesis answered | Merino-Martínez: rankings may agree |
 
 ## Biggest risk

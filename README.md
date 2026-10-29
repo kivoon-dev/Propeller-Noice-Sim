@@ -15,6 +15,7 @@ Built by Loonweewat Tan to understand the physics behind propellers. Plan: [`doc
 pip install -r requirements.txt
 python scripts/run_m1.py     # spin speed; results go to results/
 python scripts/run_m2.py     # hum level in dB(A)
+python scripts/run_m3.py     # blade spacing and uneven blades
 pytest                       # checks the physics and Empa's findings
 ```
 
@@ -75,6 +76,54 @@ cuts it less.
 
 ![dB(A) vs thrust](results/m2_dBA_vs_thrust.png)
 
+## Results so far (Milestone 3: blade spacing)
+
+Empa found that the Donut (a 4-blade toroidal propeller) has its strongest tone
+at the **shaft frequency**, once per turn. Normal propellers hum at the
+blade-pass frequency instead. Milestone 3 asks what blade layout can cause that.
+
+**The idea, in plain words.** Every blade on its own makes a tone once per turn
+and at all multiples of that. When the blades are identical and evenly spaced,
+most of those tones cancel between blades, and only the blade-pass hum is left.
+Moving a blade, or letting one blade push a little harder, spoils the
+cancelling and lets new tones through.
+
+**The surprise.** Our guessed uneven layout (blades at 0°, 85°, 180°, 265°)
+still looks the same after half a turn. Because of that, every "odd" tone
+cancels, including the once-per-turn tone. The uneven spacing adds a new tone at
+**twice** the shaft frequency, not at the shaft frequency. In the model, the
+once-per-turn tone only appears when that half-turn symmetry is broken, for
+example when one blade carries slightly more load than the others.
+
+All cases at 2.0 N, 1 m, θ = 150°:
+
+| Case | Total dB(A) | Once-per-turn tone (n = 1), dB(A) |
+|---|---|---|
+| (a) 2-blade | 53.3 | none |
+| (b) 4-blade, even | 11.4 | none |
+| (c) 4-blade, uneven 0/85/180/265 | 23.2 | none (new tone at n = 2: 22.9) |
+| (d) case c, one blade +5% load | 24.0 | 16.0 |
+| (e) 2-blade, one blade +5% load | 53.3 | 29.1 |
+
+The once-per-turn tone grows by 6 dB each time the mismatch doubles. For the
+uneven 4-blade it is 21 dB(A) below the loudest tone at 1% mismatch, 7 below at
+5% and 1.3 below at 10%. For the 2-blade it stays 18 to 38 dB(A) below the hum.
+
+![Tone ladder](results/m3_tone_ladder.png)
+
+**What this suggests (a hypothesis, not a result).** The model suggests the
+Donut's shaft tone comes from **imperfection**, meaning blades that are not
+quite alike, rather than from blade spacing alone. That holds if its spacing is
+half-turn symmetric like ours; a layout without that symmetry would make a shaft
+tone by itself. Even then, a mismatch of about 10% would be needed before the
+shaft tone becomes the loudest, as Empa saw. This has to be checked on the real
+rig (by weighing or measuring each blade) or with Empa's data.
+
+**Cautions:** the 4-blade prop is a made-up 4-blade version of the 5152, not the
+Donut. The uneven angles and the 5% mismatch are guesses. Gutin's model makes the
+slow 4-blade rotor unrealistically quiet (about 11 dB(A)), because it leaves out
+the unsteady and broadband noise that real rotors also make.
+
 ## Checkpoints: how to go back if something breaks
 
 Every working version is saved as a git **commit**. Every finished milestone gets a
@@ -97,7 +146,7 @@ Rule of thumb: commit small and often, tag only when the tests pass.
 |---|---|
 | v0.1-m1 ✅ | Spin speed, hum frequency, power, efficiency |
 | v0.2-m2 ✅ | Tonal noise level at 1 m, 60° below the rotor (Gutin model), dB(A) |
-| v0.3-m3 | Blade-spacing study: 2 vs 4 even vs 4 uneven blades |
+| v0.3-m3 ✅ | Blade-spacing study: 2 vs 4 even vs 4 uneven blades |
 | v0.4-m4 | Sound files + loudness, sharpness, annoyance (ISO 532-1) |
 | v0.5-m5 | Score Empa's real recordings, if shared |
 | v0.6-m6 | Virtual rig (3D model + animated test) |
