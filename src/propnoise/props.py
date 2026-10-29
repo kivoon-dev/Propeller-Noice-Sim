@@ -11,7 +11,7 @@ the radius and update the values here. Diameter, pitch and blade count are the
 manufacturer's numbers and are reliable.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -78,3 +78,9 @@ GEMFAN_LR5126 = Propeller(
 )
 
 PROPELLERS = (GEMFAN_5152, GEMFAN_LR5126)
+
+# ASSUMPTION: a hypothetical 4-blade Gemfan 5152 (same diameter, pitch and
+# chord, two more blades) for the Milestone 3 spacing study. It is NOT the
+# toroidal Donut, which is out of scope (see PRD).
+GEMFAN_5152_4BLADE = replace(GEMFAN_5152, name="Gemfan 5152, 4-blade (hypothetical)",
+                             blades=4)
