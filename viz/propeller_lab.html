@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Propeller Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one test-bench screen. Shared thrust slider on top, three stations (Spin, Hum, Notes) as tabs, each a pair of live instruments with a one-line takeaway. */
+:root {
+  --bg: #e8edef;
+  --panel: #f8fafb;
+  --ink: #14212a;
+  --muted: #56666f;
+  --line: #cdd7dc;
+  --p1: #2457c5;
+  --p2: #c2551a;
+  --sound: #0d8a78;
+  --stall: #c2362b;
+  --ok: #1d8a66;
+  --font-display: "Chakra Petch", "Trebuchet MS", sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1317; --panel: #141c21; --ink: #e3eaed; --muted: #8c9ca6; --line: #26333b;
+    --p1: #6f9bf4; --p2: #ef8a4a; --sound: #3cc6ac; --stall: #f0776c; --ok: #4cc99a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1317; --panel: #141c21; --ink: #e3eaed; --muted: #8c9ca6; --line: #26333b;
+  --p1: #6f9bf4; --p2: #ef8a4a; --sound: #3cc6ac; --stall: #f0776c; --ok: #4cc99a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(36px, 7vw, 60px); font-weight: 700; line-height: 1; letter-spacing: 0.01em; }
+h2 { font-size: 22px; font-weight: 600; line-height: 1.15; display: flex; align-items: center; gap: 10px; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); max-width: 60ch; }
+header { display: flex; flex-direction: column; gap: 10px; }
+
+/* control bar */
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.thrust { flex: 1 1 320px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.thrust label { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.thrust-row { display: flex; align-items: center; gap: 14px; }
+.thrust-val { font-family: var(--font-display); font-size: 34px; font-weight: 700; line-height: 1; min-width: 3.6ch; font-variant-numeric: tabular-nums; }
+.thrust-val small { font-size: 16px; color: var(--muted); margin-left: 2px; font-weight: 500; }
+input[type="range"] { width: 100%; accent-color: var(--sound); height: 28px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabs a, .seg button {
+  font: 600 15px/1 var(--font-display); color: var(--ink); text-decoration: none; background: transparent;
+  border: 1px solid var(--line); border-radius: 8px; padding: 11px 14px; cursor: pointer; letter-spacing: 0.02em;
+}
+.tabs a span { font-family: var(--font-mono); font-weight: 400; font-size: 11px; color: var(--muted); margin-left: 6px; }
+.tabs a[aria-current="page"], .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.tabs a[aria-current="page"] span { color: var(--panel); opacity: 0.7; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { font: 500 14px/1 var(--font-body); padding: 10px 12px; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--sound); outline-offset: 2px; }
+
+/* stations */
+.station { display: flex; flex-direction: column; gap: 16px; }
+.station-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
+.station-head .lead { font-size: 15px; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 16px 0; }
+.chip { font-family: var(--font-mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+.dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; flex: none; }
+canvas { display: block; width: 100%; height: 270px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.stat { padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat + .stat { border-left: 1px solid var(--line); }
+.stat .k { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.stat .v { font-family: var(--font-display); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stat .v small { font-family: var(--font-body); font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 3px; }
+.level { display: flex; align-items: center; gap: 14px; padding: 12px 16px 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.level .big { font-family: var(--font-display); font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.level .big small { font-size: 16px; color: var(--muted); font-weight: 500; margin-left: 4px; }
+.meter { flex: 1 1 80px; height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; border-radius: 5px; transition: width 120ms linear; }
+.listen { font: 600 14px/1 var(--font-display); border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+.listen[aria-pressed="true"] { background: var(--sound); border-color: var(--sound); color: var(--panel); }
+.takeaway { font-size: 18px; padding: 14px 18px; background: var(--panel); border: 1px solid var(--line); border-left: 5px solid var(--sound); border-radius: 0 10px 10px 0; }
+.takeaway b { font-family: var(--font-display); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.toggle { font: 600 14px/1 var(--font-display); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+.toggle[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+
+/* notes station */
+.notes-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; }
+.strength { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+.strength input { max-width: 220px; }
+.strength output { font-family: var(--font-mono); color: var(--ink); min-width: 4ch; }
+#rhythm { height: 110px; }
+.notebars { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; padding: 14px 16px 16px; align-items: end; }
+.nb { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.nb .val { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.nb .col { width: 100%; height: 150px; display: flex; align-items: flex-end; }
+.nb .fill { width: 100%; border-radius: 6px 6px 2px 2px; background: var(--p1); min-height: 3px; transition: height 160ms ease; }
+.nb.silent .fill { background: transparent; border: 1.5px dashed var(--line); height: 100% !important; border-radius: 6px; }
+.nb .name { font-family: var(--font-display); font-weight: 600; font-size: 15px; }
+.nb .hz { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.repeat { font-size: 15px; color: var(--muted); padding: 0 16px 14px; }
+.repeat b { color: var(--ink); }
+.foot { font-size: 13.5px; color: var(--muted); max-width: 75ch; border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+.foot a { color: var(--sound); }
+
+@media (max-width: 760px) {
+  .pair, .notes-grid { grid-template-columns: minmax(0, 1fr); }
+  canvas { height: 240px; }
+  .stat .v { font-size: 20px; }
+  .notebars { gap: 4px; padding-inline: 10px; }
+  .nb .hz { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .meter i, .nb .fill { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Gemfan 5152 vs LR5126-2 · 5.1-inch, 2-blade · same physics as the GitHub code</span>
+    <h1>Propeller Lab</h1>
+    <p class="lead">Slide the thrust and watch both propellers work. Three stations, one for each milestone so far.</p>
+  </header>
+
+  <section class="bar" aria-label="Controls">
+    <div class="thrust">
+      <label for="thrust">Push per propeller (thrust)</label>
+      <div class="thrust-row">
+        <div class="thrust-val" id="thrustVal">2.00<small>N</small></div>
+        <input type="range" id="thrust" min="0.5" max="3.5" step="0.05" value="2">
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Stations">
+      <a href="#spin" id="tab-spin">Spin<span>M1</span></a>
+      <a href="#hum" id="tab-hum">Hum<span>M2</span></a>
+      <a href="#notes" id="tab-notes">Notes<span>M3</span></a>
+    </nav>
+  </section>
+
+  <!-- M1 -->
+  <section class="station" id="view-spin" aria-labelledby="h-spin">
+    <div class="station-head">
+      <div>
+        <h2 id="h-spin">How fast must it spin?</h2>
+        <p class="lead">Top view, slowed down 150×. Each blade is cut into 80 slices; turn them on to see which slices are tilted too far.</p>
+      </div>
+      <button type="button" class="toggle" id="slices" aria-pressed="false">Show the 80 slices</button>
+    </div>
+    <div class="pair">
+      <article class="card" id="spin0"></article>
+      <article class="card" id="spin1"></article>
+    </div>
+    <div class="legend" id="sliceLegend" hidden>
+      <span><i class="dot" style="background:var(--ok)"></i>slice working</span>
+      <span><i class="dot" style="background:var(--stall)"></i>slice tilted past stall</span>
+    </div>
+    <p class="takeaway" id="takeSpin"></p>
+  </section>
+
+  <!-- M2 -->
+  <section class="station" id="view-hum" aria-labelledby="h-hum" hidden>
+    <div class="station-head">
+      <div>
+        <h2 id="h-hum">How loud is the hum?</h2>
+        <p class="lead">Side view. Each ring is a burst of hum heading for the microphone 1 m away.</p>
+      </div>
+      <div class="seg" role="group" aria-label="Microphone side">
+        <button type="button" id="micBelow" aria-pressed="true">Mic below (like Empa)</button>
+        <button type="button" id="micAbove" aria-pressed="false">Mic above</button>
+      </div>
+    </div>
+    <div class="pair">
+      <article class="card" id="hum0"></article>
+      <article class="card" id="hum1"></article>
+    </div>
+    <p class="takeaway" id="takeHum"></p>
+  </section>
+
+  <!-- M3 -->
+  <section class="station" id="view-notes" aria-labelledby="h-notes" hidden>
+    <div class="station-head">
+      <div>
+        <h2 id="h-notes">Which notes can you hear?</h2>
+        <p class="lead">Pick a blade layout. The strip shows the bump each blade makes as it passes the mic during one turn.</p>
+      </div>
+      <div class="seg" role="group" aria-label="Blade layout" id="layouts">
+        <button type="button" data-layout="two" aria-pressed="true">2 blades</button>
+        <button type="button" data-layout="even4" aria-pressed="false">4 even</button>
+        <button type="button" data-layout="uneven4" aria-pressed="false">4 uneven</button>
+        <button type="button" data-layout="strong4" aria-pressed="false">4 uneven, one stronger</button>
+      </div>
+    </div>
+    <div class="notes-grid">
+      <article class="card">
+        <div class="card-head"><h2 style="font-size:18px">Top view</h2><span class="chip" id="layoutChip"></span></div>
+        <canvas id="notesTop" aria-label="Top view of the chosen blade layout spinning"></canvas>
+        <div class="level" style="justify-content:space-between">
+          <div class="strength" id="strengthBox">
+            <label for="strength">One blade pushes harder by</label>
+            <input type="range" id="strength" min="0" max="20" step="1" value="5">
+            <output id="strengthVal" for="strength">5%</output>
+          </div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><h2 style="font-size:18px">One turn, as the mic hears it</h2><button type="button" class="listen" id="playNotes" aria-pressed="false">Play notes</button></div>
+        <canvas id="rhythm" aria-label="Rhythm of blade bumps during one full turn"></canvas>
+        <p class="repeat" id="repeatText"></p>
+        <div class="notebars" id="noteBars"></div>
+      </article>
+    </div>
+    <p class="takeaway" id="takeNotes"></p>
+  </section>
+
+  <footer class="foot">
+    <p>Models: blade element momentum theory for spin (M1), Gutin's tonal formula with A-weighting for the hum (M2), and a sum over blade positions for the notes (M3). Blade widths are estimates until the real blades are measured. Only the hum is modelled; the whoosh (broadband noise) is not.</p>
+    <p>Compared with Meister, Van Renterghem &amp; Pieren, <a href="https://doi.org/10.1051/aacus/2026057" target="_blank" rel="noopener">Acta Acustica 2026</a>. Code: <a href="https://github.com/kivoon-dev/Propeller-Noice-Sim" target="_blank" rel="noopener">github.com/kivoon-dev/Propeller-Noice-Sim</a></p>
+  </footer>
+</div>
+
+<script>
+(() => {
+  // ---------- Model (numbers from the Python package, M1 to M3) ----------
+  const RHO = 1.225, C0 = 340.3, R = 5.1 * 0.0254 / 2, AREA = Math.PI * R * R, RE = 0.8 * R, DIST = 1, PREF = 20e-6;
+  const ROOT = 0.15;
+  const PROPS = [
+    { name: "Gemfan 5152", sub: "high pitch", color: "--p1", ct: 0.017386514338501503, cp: 0.002664190693561391,
+      chord: [10, 15, 0.45, 6],
+      stall: "11111111111111111111111111111111111111111111111111111111111111111111111111111100" },
+    { name: "Gemfan LR5126-2", sub: "low pitch", color: "--p2", ct: 0.009815171382406262, cp: 0.0010133931919100285,
+      chord: [7, 10, 0.40, 5],
+      stall: "11111111111111111111111111111111100000000000000000000000000000000000000000000000" },
+  ];
+  // ASSUMPTION (same as M3): a 4-blade rotor made of four 5152 blades, not the toroidal Donut.
+  const FOUR = { ct: 0.03488480487161594, cp: 0.00629679381384414 };
+  const LAYOUTS = {
+    two:     { label: "2 blades", angles: [0, 180], strong: false },
+    even4:   { label: "4 even · 0/90/180/270°", angles: [0, 90, 180, 270], strong: false },
+    uneven4: { label: "4 uneven · 0/85/180/265°", angles: [0, 85, 180, 265], strong: false },
+    strong4: { label: "4 uneven · one stronger", angles: [0, 85, 180, 265], strong: true },
+  };
+
+  function op(ct, cp, T) {
+    const omega = Math.sqrt(T / (ct * RHO * AREA * R * R));
+    const P = cp * RHO * AREA * (omega * R) ** 3;
+    return { T, omega, rpm: omega * 60 / (2 * Math.PI), P, Q: P / omega, vi: Math.sqrt(T / (2 * RHO * AREA)) };
+  }
+  function besselJ(n, x) {
+    let term = 1;
+    for (let i = 1; i <= n; i++) term *= (x / 2) / i;
+    let sum = term; const q = -((x / 2) ** 2);
+    for (let k = 0; k < 60; k++) { term *= q / ((k + 1) * (k + 1 + n)); sum += term; if (Math.abs(term) < 1e-18 * Math.abs(sum)) break; }
+    return sum;
+  }
+  function aWeight(f) {
+    const f2 = f * f;
+    const ra = (12194 ** 2 * f2 * f2) / ((f2 + 20.6 ** 2) * Math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12194 ** 2));
+    return 20 * Math.log10(ra) + 2.0;
+  }
+  // Shaft-order tones for any blade layout (M3). Evenly spaced equal blades give the M2 hum exactly.
+  function tones(o, anglesDeg, weights, thetaDeg, nMax) {
+    const th = thetaDeg * Math.PI / 180;
+    const load = Math.abs(o.T * Math.cos(th) - o.Q * C0 / (o.omega * RE * RE));
+    const wsum = weights.reduce((a, b) => a + b, 0);
+    const out = [];
+    for (let n = 1; n <= nMax; n++) {
+      let re = 0, im = 0;
+      anglesDeg.forEach((a, k) => { const ph = n * a * Math.PI / 180; re += weights[k] * Math.cos(ph); im += weights[k] * Math.sin(ph); });
+      let af = Math.hypot(re, im); if (af < 1e-9 * wsum) af = 0;
+      const one = (n * o.omega / (2 * Math.SQRT2 * Math.PI * C0 * DIST)) * load * Math.abs(besselJ(n, n * o.omega * RE * Math.sin(th) / C0));
+      const p = one * af / wsum;
+      const f = n * o.omega / (2 * Math.PI);
+      const LA = p > 0 ? 20 * Math.log10(p / PREF) + aWeight(f) : -Infinity;
+      out.push({ n, f, p, LA });
+    }
+    return out;
+  }
+  function total(list) { const e = list.reduce((s, t) => s + (Number.isFinite(t.LA) ? 10 ** (t.LA / 10) : 0), 0); return e > 0 ? 10 * Math.log10(e) : -Infinity; }
+  function hum(o, thetaDeg) { const t = tones(o, [0, 180], [1, 1], thetaDeg, 20); return { tones: t, dBA: total(t) }; }
+  window.__labModel = { op, tones, hum, PROPS, FOUR };
+
+  // ---------- State ----------
+  const $ = (id) => document.getElementById(id);
+  const state = { T: 2, view: "spin", slices: false, below: true, layout: "two", strength: 0.05, listen: null };
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let C = {};
+  function readColors() { const cs = getComputedStyle(document.documentElement); ["--ink", "--muted", "--line", "--p1", "--p2", "--sound", "--stall", "--ok", "--panel"].forEach((k) => C[k] = cs.getPropertyValue(k).trim()); }
+  const fmt = (v, d = 1) => Number.isFinite(v) ? v.toFixed(d) : "–";
+
+  // ---------- Build cards ----------
+  PROPS.forEach((p, i) => {
+    $("spin" + i).innerHTML = `
+      <div class="card-head"><h2><i class="dot" style="background:var(${p.color})"></i>${p.name}</h2><span class="chip">${p.sub}</span></div>
+      <canvas id="spinC${i}" aria-label="${p.name} seen from above, spinning"></canvas>
+      <div class="stats">
+        <div class="stat"><span class="k">Spin</span><span class="v" id="rpm${i}"></span></div>
+        <div class="stat"><span class="k">Hum note</span><span class="v" id="bpf${i}"></span></div>
+        <div class="stat"><span class="k">Power</span><span class="v" id="pow${i}"></span></div>
+      </div>`;
+    $("hum" + i).innerHTML = `
+      <div class="card-head"><h2><i class="dot" style="background:var(${p.color})"></i>${p.name}</h2><button type="button" class="listen" id="listen${i}" aria-pressed="false">Listen</button></div>
+      <canvas id="humC${i}" aria-label="${p.name} from the side, with sound rings travelling to the microphone"></canvas>
+      <div class="level"><div class="big" id="dba${i}"></div><div class="meter" aria-hidden="true"><i id="meter${i}" style="background:var(${p.color})"></i></div></div>`;
+  });
+  const bars = $("noteBars");
+  for (let n = 1; n <= 8; n++) {
+    const d = document.createElement("div"); d.className = "nb"; d.id = "nb" + n;
+    d.innerHTML = `<span class="val" id="nbv${n}"></span><div class="col"><div class="fill" id="nbf${n}"></div></div><span class="name">${n}</span><span class="hz" id="nbh${n}"></span>`;
+    bars.appendChild(d);
+  }
+
+  // ---------- Update numbers ----------
+  let cur = {};
+  function update() {
+    $("thrustVal").innerHTML = `${state.T.toFixed(2)}<small>N</small>`;
+    const ops = PROPS.map((p) => op(p.ct, p.cp, state.T));
+    const theta = state.below ? 150 : 30;
+    const hums = ops.map((o) => hum(o, theta));
+    cur.ops = ops; cur.hums = hums;
+    ops.forEach((o, i) => {
+      $("rpm" + i).innerHTML = `${Math.round(o.rpm).toLocaleString("en-US")}<small>rpm</small>`;
+      $("bpf" + i).innerHTML = `${Math.round(2 * o.rpm / 60)}<small>Hz</small>`;
+      $("pow" + i).innerHTML = `${o.P.toFixed(1)}<small>W</small>`;
+      const L = hums[i].dBA;
+      $("dba" + i).innerHTML = `${fmt(Math.max(L, -99))}<small>dB(A)</small>`;
+      $("meter" + i).style.width = `${Math.min(100, Math.max(0, L / 70 * 100))}%`;
+    });
+    const faster = (ops[1].rpm / ops[0].rpm - 1) * 100;
+    $("takeSpin").innerHTML = state.slices
+      ? `The steep 5152 has <b>${count(PROPS[0].stall)} of 80</b> slices past stall; the gentle LR5126-2 has <b>${count(PROPS[1].stall)}</b>. Steep blades in a hover waste energy.`
+      : `To make the same push, the small-bite LR5126-2 must spin <b>${faster.toFixed(0)}% faster</b>. Same as Empa measured.`;
+    const gap = hums[1].dBA - hums[0].dBA;
+    $("takeHum").innerHTML = state.below
+      ? `From below, the 5152 is <b>${gap.toFixed(1)} dB(A) quieter</b>. Empa measured about 5. The LR5126-2 spins faster, and tip speed is the volume knob.`
+      : `From above, push and twist <b>cancel</b>, so the 5152 goes almost silent. Empa's mic was below, where they add up.`;
+    updateNotes();
+    updateAudio();
+    if (reduce.matches) drawAll(0);
+  }
+  const count = (s) => s.split("").filter((c) => c === "1").length;
+
+  function layoutData() {
+    const L = LAYOUTS[state.layout];
+    const weights = L.angles.map((_, k) => (L.strong && k === 0 ? 1 + state.strength : 1));
+    const o = L.angles.length === 2 ? op(PROPS[0].ct, PROPS[0].cp, state.T) : op(FOUR.ct, FOUR.cp, state.T);
+    return { L, weights, o, list: tones(o, L.angles, weights, 150, 8) };
+  }
+  function repeatsPerTurn(angles, weights) {
+    for (const r of [4, 3, 2]) {
+      const shift = 360 / r;
+      const ok = angles.every((a, k) => angles.some((b, j) => Math.abs((((a + shift - b) % 360) + 540) % 360 - 180) < 1e-6 && Math.abs(weights[j] - weights[k]) < 1e-9));
+      if (ok) return r;
+    }
+    return 1;
+  }
+  function updateNotes() {
+    const d = layoutData(); cur.notes = d;
+    $("layoutChip").textContent = d.L.label;
+    $("strengthBox").hidden = !d.L.strong;
+    $("strengthVal").textContent = `${Math.round(state.strength * 100)}%`;
+    d.list.forEach((t) => {
+      const el = $("nb" + t.n), silent = !Number.isFinite(t.LA);
+      el.classList.toggle("silent", silent);
+      $("nbv" + t.n).textContent = silent ? "silent" : `${t.LA.toFixed(0)} dB`;
+      $("nbf" + t.n).style.height = silent ? "" : `${Math.max(2, Math.min(100, t.LA / 60 * 100))}%`;
+      $("nbh" + t.n).textContent = `${Math.round(t.f)} Hz`;
+    });
+    const r = repeatsPerTurn(d.L.angles, d.weights);
+    const allowed = r === 1 ? "every note" : "notes " + [1, 2, 3, 4, 5, 6, 7, 8].filter((n) => n % r === 0).join(", ");
+    $("repeatText").innerHTML = `Pattern repeats <b>${r === 1 ? "once" : r + "×"} per turn</b>, so you can hear <b>${allowed}</b>.`;
+    const msg = {
+      two: `Two bumps per turn. Notes 2, 4, 6… only. <b>Note 2 is the hum</b> you heard in the Hum station.`,
+      even4: `Four even bumps. Only notes 4 and 8 survive, and they are very faint because this slow rotor barely “sings” high notes in this model.`,
+      uneven4: `Uneven gaps, but the second half of the turn copies the first. <b>Note 1 stays silent</b>; a faint note 2 appears.`,
+      strong4: `One blade pushes harder, so the halves no longer match. <b>Note 1 appears</b>. Double the difference and it gets 6 dB louder.`,
+    };
+    $("takeNotes").innerHTML = msg[state.layout];
+  }
+
+  // ---------- Drawing ----------
+  function size(c) {
+    const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const ctx = c.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return { ctx, w, h };
+  }
+  function chordMM(spec, r) {
+    const [root, max, rmax, tip] = spec;
+    if (r <= rmax) return root + (max - root) * (r - ROOT) / (rmax - ROOT);
+    return max + (tip - max) * (r - rmax) / (1 - rmax);
+  }
+  function drawRotor(ctx, cx, cy, Rp, phase, angles, weights, spec, colorFor, slices, stall) {
+    ctx.strokeStyle = C["--line"]; ctx.setLineDash([4, 5]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, Rp, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    const R_MM = R * 1000;
+    angles.forEach((a, k) => {
+      const w = weights ? weights[k] : 1;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(phase + a * Math.PI / 180);
+      if (slices) {
+        for (let i = 0; i < 80; i++) {
+          const r0 = ROOT + i * (1 - ROOT) / 80, r1 = ROOT + (i + 1) * (1 - ROOT) / 80, rm = (r0 + r1) / 2;
+          const half = chordMM(spec, rm) / R_MM * Rp / 2;
+          ctx.fillStyle = stall[i] === "1" ? C["--stall"] : C["--ok"];
+          ctx.fillRect(r0 * Rp, -half, Math.max(0.6, (r1 - r0) * Rp - 0.7), half * 2);
+        }
+      } else {
+        ctx.fillStyle = colorFor(k);
+        ctx.beginPath();
+        const N = 24, pts = [];
+        for (let i = 0; i <= N; i++) { const r = ROOT + i * (1 - ROOT) / N; pts.push([r * Rp, chordMM(spec, r) / R_MM * Rp / 2 * (0.85 + 0.15 * w)]); }
+        ctx.moveTo(pts[0][0], -pts[0][1]);
+        pts.forEach(([x, y]) => ctx.lineTo(x, -y));
+        for (let i = pts.length - 1; i >= 0; i--) ctx.lineTo(pts[i][0], pts[i][1] * 0.55);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    });
+    ctx.fillStyle = C["--ink"]; ctx.beginPath(); ctx.arc(cx, cy, ROOT * Rp, 0, Math.PI * 2); ctx.fill();
+  }
+
+  const SLOW = 150;
+  const spinPhase = [0, 0], humPanels = [{ phase: 0, rings: [], clock: 0, drops: [], dclock: 0 }, { phase: 0, rings: [], clock: 0, drops: [], dclock: 0 }];
+  let notesPhase = 0;
+
+  function drawSpin(i, dt) {
+    const { ctx, w, h } = size($("spinC" + i)), p = PROPS[i], o = cur.ops[i];
+    spinPhase[i] += dt * (o.rpm / 60 / SLOW) * 2 * Math.PI;
+    ctx.clearRect(0, 0, w, h);
+    const Rp = Math.min(w, h) * 0.42;
+    drawRotor(ctx, w / 2, h / 2, Rp, spinPhase[i], [0, 180], null, p.chord, () => C[p.color], state.slices, p.stall);
+    ctx.fillStyle = C["--muted"]; ctx.font = `11px ${getComputedStyle(document.body).getPropertyValue("--font-mono")}`;
+    ctx.fillText(`${SLOW}× slower than real`, 12, h - 12);
+  }
+
+  function drawHum(i, dt) {
+    const { ctx, w, h } = size($("humC" + i)), pan = humPanels[i], p = PROPS[i], o = cur.ops[i], L = cur.hums[i].dBA;
+    const col = C[p.color], ink = C["--ink"], muted = C["--muted"], line = C["--line"], snd = C["--sound"];
+    ctx.clearRect(0, 0, w, h);
+    const cx = Math.min(w * 0.3, 150), cy = h * 0.5;
+    const len = Math.min((h / 2 - 22) / Math.sin(Math.PI / 3), (w - cx - 30) / Math.cos(Math.PI / 3));
+    const sgn = state.below ? 1 : -1;
+    const mic = { x: cx + len * 0.5, y: cy + sgn * len * Math.sin(Math.PI / 3) };
+    const Rp = Math.min(len * 0.32, cx - 16);
+    pan.phase += dt * (o.rpm / 60 / SLOW) * 2 * Math.PI;
+    // downwash
+    pan.dclock += dt;
+    while (pan.dclock > 0.05) { pan.dclock -= 0.05; pan.drops.push({ x: cx + (Math.random() * 2 - 1) * Rp * 0.85, y: cy + 8 }); }
+    ctx.strokeStyle = muted; ctx.globalAlpha = 0.45; ctx.lineWidth = 1.2;
+    pan.drops = pan.drops.filter((d) => (d.y += o.vi * 8 * dt) < h + 10);
+    pan.drops.forEach((d) => { ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y + 7); ctx.stroke(); });
+    ctx.globalAlpha = 1;
+    // rings
+    const strength = Math.max(0, Math.min(1, L / 65));
+    pan.clock += dt;
+    const period = 100 / (2 * o.rpm / 60);
+    while (pan.clock > period) { pan.clock -= period; pan.rings.push({ r: Rp * 0.3 }); }
+    pan.rings = pan.rings.filter((g) => (g.r += 75 * dt) < Math.hypot(w, h));
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    pan.rings.forEach((g) => { ctx.globalAlpha = strength * 0.7 * Math.max(0, 1 - g.r / (len * 1.35)); ctx.beginPath(); ctx.arc(cx, cy, g.r, 0, Math.PI * 2); ctx.stroke(); });
+    ctx.globalAlpha = 1;
+    // path to mic
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = snd; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(mic.x, mic.y); ctx.stroke(); ctx.setLineDash([]);
+    // stand + motor
+    ctx.fillStyle = muted; ctx.globalAlpha = 0.8;
+    ctx.fillRect(cx - 9, cy + 3, 18, 15); ctx.fillRect(cx - 2.5, cy + 18, 5, h - cy - 18); ctx.globalAlpha = 1;
+    // rotor side view
+    const c1 = Math.cos(pan.phase);
+    ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - Rp, cy); ctx.lineTo(cx + Rp, cy); ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(cx - Rp * c1, cy); ctx.lineTo(cx + Rp * c1, cy); ctx.stroke(); ctx.lineCap = "butt";
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
+    // push arrow
+    const tl = 14 + o.T * 10;
+    ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy - 10 - tl); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - 16 - tl); ctx.lineTo(cx - 5, cy - 8 - tl); ctx.lineTo(cx + 5, cy - 8 - tl); ctx.closePath(); ctx.fill();
+    // mic
+    ctx.fillStyle = snd; ctx.globalAlpha = 0.18 + strength * 0.3;
+    ctx.beginPath(); ctx.arc(mic.x, mic.y, 7 + strength * 11, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(mic.x, mic.y, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ink; ctx.font = `500 11px ${getComputedStyle(document.body).getPropertyValue("--font-mono")}`;
+    ctx.textAlign = "right"; ctx.fillText("mic · 1 m", Math.min(w - 8, mic.x + 48), mic.y + (state.below ? -14 : 22)); ctx.textAlign = "left";
+  }
+
+  function drawNotes(dt) {
+    const d = cur.notes; if (!d) return;
+    notesPhase += dt * (d.o.rpm / 60 / (SLOW * 2)) * 2 * Math.PI;
+    // top view
+    { const { ctx, w, h } = size($("notesTop"));
+      ctx.clearRect(0, 0, w, h);
+      const Rp = Math.min(w, h) * 0.42;
+      drawRotor(ctx, w / 2, h / 2, Rp, notesPhase, d.L.angles, d.weights, PROPS[0].chord, (k) => (d.L.strong && k === 0 ? C["--p2"] : C["--p1"]), false, null);
+      // mic marker at the top edge: bumps happen when a blade passes it
+      ctx.fillStyle = C["--sound"]; ctx.beginPath(); ctx.arc(w / 2, h / 2 - Rp - 10, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = C["--muted"]; ctx.font = `11px ${getComputedStyle(document.body).getPropertyValue("--font-mono")}`;
+      ctx.textAlign = "center"; ctx.fillText("mic", w / 2, h / 2 - Rp - 20); ctx.textAlign = "left"; }
+    // rhythm strip
+    { const { ctx, w, h } = size($("rhythm"));
+      ctx.clearRect(0, 0, w, h);
+      const x0 = 18, x1 = w - 18, base = h - 26, span = x1 - x0;
+      ctx.strokeStyle = C["--line"]; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x0, base); ctx.lineTo(x1, base); ctx.stroke();
+      ctx.setLineDash([3, 4]);
+      [0.5].forEach((f) => { ctx.beginPath(); ctx.moveTo(x0 + f * span, 10); ctx.lineTo(x0 + f * span, base); ctx.stroke(); });
+      ctx.setLineDash([]);
+      ctx.fillStyle = C["--muted"]; ctx.font = `11px ${getComputedStyle(document.body).getPropertyValue("--font-mono")}`;
+      ctx.fillText("start", x0, h - 8); ctx.textAlign = "center"; ctx.fillText("half turn", x0 + span / 2, h - 8);
+      ctx.textAlign = "right"; ctx.fillText("full turn", x1, h - 8); ctx.textAlign = "left";
+      // blade k passes the mic when the rotor has turned by (360 - angle) mod 360 from start
+      const turn = ((notesPhase / (2 * Math.PI)) % 1 + 1) % 1;
+      const head = x0 + turn * span;
+      d.L.angles.forEach((a, k) => {
+        const pos = ((360 - a) % 360) / 360;
+        const x = x0 + pos * span, bh = 46 * d.weights[k];
+        const near = Math.abs(turn - pos) < 0.025 || Math.abs(turn - pos - 1) < 0.025;
+        ctx.fillStyle = d.L.strong && k === 0 ? C["--p2"] : C["--p1"];
+        ctx.globalAlpha = near ? 1 : 0.75;
+        ctx.fillRect(x - 5, base - bh, 10, bh);
+      });
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = C["--sound"]; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(head, 8); ctx.lineTo(head, base); ctx.stroke(); }
+  }
+
+  function drawAll(dt) {
+    if (!cur.ops) return;
+    if (state.view === "spin") [0, 1].forEach((i) => drawSpin(i, dt));
+    if (state.view === "hum") [0, 1].forEach((i) => drawHum(i, dt));
+    if (state.view === "notes") drawNotes(dt);
+  }
+  let last = performance.now();
+  function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; if (!reduce.matches) drawAll(dt); requestAnimationFrame(frame); }
+
+  // ---------- Audio ----------
+  let audio = null;
+  function ensureAudio() {
+    if (audio) return audio;
+    const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return null;
+    const ctx = new Ctx(), master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+    const voices = Array.from({ length: 10 }, () => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "sine"; o.frequency.value = 200; g.gain.value = 0; o.connect(g).connect(master); o.start(); return { o, g }; });
+    audio = { ctx, master, voices }; return audio;
+  }
+  function updateAudio() {
+    if (!audio) return;
+    const t = audio.ctx.currentTime;
+    let list = [], scale = 0;
+    if (state.listen === "hum0" || state.listen === "hum1") {
+      const i = state.listen === "hum0" ? 0 : 1;
+      list = cur.hums[i].tones.filter((x) => x.p > 0).slice(0, 10);
+      list = list.map((x) => ({ f: x.f, a: Math.min(0.6, 0.3 * x.p / (PREF * 10 ** (75 / 20))) }));
+    } else if (state.listen === "notes" && cur.notes) {
+      const ps = cur.notes.list.filter((x) => x.p > 0);
+      const max = Math.max(...ps.map((x) => x.p), 1e-12);
+      list = ps.map((x) => ({ f: x.f, a: 0.3 * x.p / max }));   // volume evened out so faint layouts are still audible
+    }
+    audio.master.gain.setTargetAtTime(list.length ? 0.5 : 0, t, 0.05);
+    audio.voices.forEach((v, k) => {
+      const tn = list[k];
+      v.g.gain.setTargetAtTime(tn ? tn.a : 0, t, 0.05);
+      if (tn) v.o.frequency.setTargetAtTime(Math.min(tn.f, 20000), t, 0.03);
+    });
+    ["listen0", "listen1"].forEach((id, i) => $(id).setAttribute("aria-pressed", String(state.listen === "hum" + i)));
+    $("playNotes").setAttribute("aria-pressed", String(state.listen === "notes"));
+    $("playNotes").textContent = state.listen === "notes" ? "Stop" : "Play notes";
+    ["listen0", "listen1"].forEach((id, i) => { $(id).textContent = state.listen === "hum" + i ? "Stop" : "Listen"; });
+  }
+  function toggleListen(key) {
+    state.listen = state.listen === key ? null : key;
+    if (state.listen) { const a = ensureAudio(); if (a && a.ctx.state === "suspended") a.ctx.resume().catch(() => {}); }
+    updateAudio();
+  }
+
+  // ---------- Views ----------
+  const VIEWS = ["spin", "hum", "notes"];
+  function route() {
+    const v = (location.hash || "").slice(1);
+    state.view = VIEWS.includes(v) ? v : "spin";
+    VIEWS.forEach((name) => {
+      $("view-" + name).hidden = name !== state.view;
+      if (name === state.view) $("tab-" + name).setAttribute("aria-current", "page"); else $("tab-" + name).removeAttribute("aria-current");
+    });
+    if (state.listen && !(state.listen === "notes" ? state.view === "notes" : state.view === "hum")) { state.listen = null; updateAudio(); }
+    drawAll(0.016);
+  }
+
+  // ---------- Wiring ----------
+  $("thrust").addEventListener("input", (e) => { state.T = parseFloat(e.target.value); update(); });
+  $("slices").addEventListener("click", () => { state.slices = !state.slices; $("slices").setAttribute("aria-pressed", String(state.slices)); $("slices").textContent = state.slices ? "Hide the slices" : "Show the 80 slices"; $("sliceLegend").hidden = !state.slices; update(); });
+  $("micBelow").addEventListener("click", () => { state.below = true; $("micBelow").setAttribute("aria-pressed", "true"); $("micAbove").setAttribute("aria-pressed", "false"); update(); });
+  $("micAbove").addEventListener("click", () => { state.below = false; $("micAbove").setAttribute("aria-pressed", "true"); $("micBelow").setAttribute("aria-pressed", "false"); update(); });
+  $("listen0").addEventListener("click", () => toggleListen("hum0"));
+  $("listen1").addEventListener("click", () => toggleListen("hum1"));
+  $("playNotes").addEventListener("click", () => toggleListen("notes"));
+  document.querySelectorAll("#layouts button").forEach((b) => b.addEventListener("click", () => {
+    state.layout = b.dataset.layout;
+    document.querySelectorAll("#layouts button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    update();
+  }));
+  $("strength").addEventListener("input", (e) => { state.strength = parseFloat(e.target.value) / 100; update(); });
+  window.addEventListener("hashchange", route);
+  window.addEventListener("resize", () => drawAll(0));
+  const refresh = () => { readColors(); drawAll(0); };
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refresh);
+  new MutationObserver(refresh).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  state.T = parseFloat($("thrust").value) || 2;
+  state.strength = (parseFloat($("strength").value) || 5) / 100;
+  readColors();
+  update();
+  route();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

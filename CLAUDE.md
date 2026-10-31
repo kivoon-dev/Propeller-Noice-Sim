@@ -36,8 +36,10 @@ technical name. Keep code readable over clever.
 - `src/propnoise/spacing.py`: Milestone 3, blade angles and loading weights
   (shaft-order tones)
 - `scripts/run_m3.py`: writes `results/m3_spacing.csv` and the tone ladder
-- `viz/hum_bench.html`: interactive page; copies CT/CP and constants into JS
-  (`tests/test_viz.py` keeps them in sync, so update the page when geometry changes)
+- `viz/hum_bench.html`, `viz/propeller_lab.html`: interactive pages; copy CT/CP
+  (2- and 4-blade), stalled slices and constants into JS (`tests/test_viz.py`
+  keeps them in sync, so update both pages when geometry changes). The Lab is
+  served by GitHub Pages from main, root folder.
 - `tests/`: physics sanity checks + Empa ordering checks
 
 ## Milestones

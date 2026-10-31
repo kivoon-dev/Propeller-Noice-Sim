@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased: Propeller Lab page
+- `viz/propeller_lab.html`: one page with three stations, Spin (M1, with the
+  80 blade slices and which ones stall), Hum (M2, mic below or above) and Notes
+  (M3, 2 / 4 even / 4 uneven / 4 uneven with one stronger blade, a one-turn
+  rhythm strip and shaft-order note bars). Same model as the Python code.
+- Published with GitHub Pages and linked at the top of the README.
+- `tests/test_viz.py` now checks both pages, plus the Lab's 4-blade
+  coefficients and stalled-slice pattern.
+
 ## v0.3-m3 (2026-10-29): blade spacing and loading mismatch
 - `spacing.py`: one blade's Gutin tone at every shaft order n, summed over the
   blades with |Σ w_k e^(i n φ_k)| / Σw (angles φ_k, loading weights w_k). Equal,
