@@ -184,7 +184,7 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
       <div class="seg" role="group" aria-labelledby="motionLabel">
         <button type="button" id="motion" aria-pressed="true">Pause motion</button>
       </div>
-      <span class="hint" id="motionHint" hidden>Paused because your computer is set to reduce animations. Press Play motion to watch it spin.</span>
+      <span class="hint" id="motionHint" hidden>Your computer is set to reduce animations. Press Pause motion to stop the movement.</span>
     </div>
   </section>
 
@@ -300,7 +300,7 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
   // ---- State -------------------------------------------------------------
   const state = { T: 2.0, side: "slip", listen: -1, volume: 0.5 };
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let animate = !reduceMotion.matches;
+  let animate = true;
   const $ = (id) => document.getElementById(id);
   let colors = {};
   function readColors() {
@@ -649,18 +649,18 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
   $("volume").addEventListener("input", (e) => { state.volume = parseFloat(e.target.value); updateAudio(); });
 
   const refreshTheme = () => { readColors(); if (!animate) drawRigs(0); };
-  // Motion starts paused when the computer asks for reduced motion; the button overrides it.
+  // Motion plays by default; the button pauses it (the hint shows when the computer asks for reduced motion).
   function setMotion(on) {
     animate = on;
     $("motion").setAttribute("aria-pressed", String(on));
     $("motion").textContent = on ? "Pause motion" : "Play motion";
-    $("motionHint").hidden = on || !reduceMotion.matches;
+    $("motionHint").hidden = !on || !reduceMotion.matches;
     drawRigs(0);
   }
   $("motion").addEventListener("click", () => setMotion(!animate));
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshTheme);
   new MutationObserver(refreshTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  reduceMotion.addEventListener("change", () => setMotion(!reduceMotion.matches));
+  reduceMotion.addEventListener("change", () => setMotion(animate));
   window.addEventListener("resize", () => drawRigs(0));
 
   state.T = parseFloat($("thrust").value) || 2.0;

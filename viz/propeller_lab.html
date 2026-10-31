@@ -168,7 +168,7 @@ canvas { display: block; width: 100%; height: 270px; }
     </nav>
     <div class="motion">
       <button type="button" class="toggle" id="motion" aria-pressed="true">Pause motion</button>
-      <span class="hint" id="motionHint" hidden>Paused because your computer is set to reduce animations. Press Play motion to watch it spin.</span>
+      <span class="hint" id="motionHint" hidden>Your computer is set to reduce animations. Press Pause motion to stop the movement.</span>
     </div>
   </section>
 
@@ -353,7 +353,7 @@ canvas { display: block; width: 100%; height: 270px; }
   // ---------- State ----------
   const $ = (id) => document.getElementById(id);
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const state = { T: 2, view: "spin", slices: false, below: true, layout: "two", strength: 0.05, listen: null, whoosh: "none", wav: null, animate: !reduce.matches };
+  const state = { T: 2, view: "spin", slices: false, below: true, layout: "two", strength: 0.05, listen: null, whoosh: "none", wav: null, animate: true };
   let C = {};
   function readColors() { const cs = getComputedStyle(document.documentElement); ["--ink", "--muted", "--line", "--p1", "--p2", "--sound", "--stall", "--ok", "--panel"].forEach((k) => C[k] = cs.getPropertyValue(k).trim()); }
   const fmt = (v, d = 1) => Number.isFinite(v) ? v.toFixed(d) : "–";
@@ -646,12 +646,12 @@ canvas { display: block; width: 100%; height: 270px; }
   }
   let last = performance.now();
   function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; if (state.animate) drawAll(dt); requestAnimationFrame(frame); }
-  // Motion starts paused when the computer asks for reduced motion; the button overrides it.
+  // Motion plays by default; the button pauses it (the hint shows when the computer asks for reduced motion).
   function setMotion(on) {
     state.animate = on;
     $("motion").setAttribute("aria-pressed", String(on));
     $("motion").textContent = on ? "Pause motion" : "Play motion";
-    $("motionHint").hidden = on || !reduce.matches;
+    $("motionHint").hidden = !on || !reduce.matches;
     drawAll(0);
   }
 
@@ -730,7 +730,7 @@ canvas { display: block; width: 100%; height: 270px; }
   document.querySelectorAll("#wavs button").forEach((b) => b.addEventListener("click", () => toggleWav(b.dataset.wav)));
   $("strength").addEventListener("input", (e) => { state.strength = parseFloat(e.target.value) / 100; update(); });
   $("motion").addEventListener("click", () => setMotion(!state.animate));
-  reduce.addEventListener("change", () => setMotion(!reduce.matches));
+  reduce.addEventListener("change", () => setMotion(state.animate));
   window.addEventListener("hashchange", route);
   window.addEventListener("resize", () => drawAll(0));
   const refresh = () => { readColors(); drawAll(0); };
