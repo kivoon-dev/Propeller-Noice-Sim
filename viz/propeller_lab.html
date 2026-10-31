@@ -68,8 +68,10 @@ input[type="range"] { width: 100%; accent-color: var(--sound); height: 28px; }
 .tabs a[aria-current="page"], .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
 .tabs a[aria-current="page"] span { color: var(--panel); opacity: 0.7; }
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
-.motion { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.motion .hint { font-size: 13px; color: var(--muted); max-width: 32ch; }
+/* The motion button keeps its own row and one look, so it never jumps or fades when pressed. */
+.motion { flex: 1 1 100%; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.motion .hint { font-size: 13px; color: var(--muted); }
+#motion, #motion[aria-pressed] { background: var(--panel); color: var(--ink); border: 1.5px solid var(--ink); }
 .seg button { font: 500 14px/1 var(--font-body); padding: 10px 12px; }
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--sound); outline-offset: 2px; }
 
@@ -167,7 +169,7 @@ canvas { display: block; width: 100%; height: 270px; }
       <a href="#score" id="tab-score">Score<span>M4</span></a>
     </nav>
     <div class="motion">
-      <button type="button" class="toggle" id="motion" aria-pressed="true">Pause motion</button>
+      <button type="button" class="toggle" id="motion" aria-pressed="true">❚❚ Pause motion</button>
       <span class="hint" id="motionHint" hidden>Your computer is set to reduce animations. Press Pause motion to stop the movement.</span>
     </div>
   </section>
@@ -650,7 +652,7 @@ canvas { display: block; width: 100%; height: 270px; }
   function setMotion(on) {
     state.animate = on;
     $("motion").setAttribute("aria-pressed", String(on));
-    $("motion").textContent = on ? "Pause motion" : "Play motion";
+    $("motion").textContent = on ? "❚❚ Pause motion" : "▶ Play motion";
     $("motionHint").hidden = !on || !reduce.matches;
     drawAll(0);
   }

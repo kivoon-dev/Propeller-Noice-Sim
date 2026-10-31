@@ -73,6 +73,8 @@ input[type="range"] { width: 100%; accent-color: var(--signal); height: 28px; }
   border-radius: 4px; padding: 9px 11px; cursor: pointer;
 }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+/* The motion button keeps one look, so it never fades when pressed. */
+.seg #motion, .seg #motion[aria-pressed] { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); }
 .seg button:focus-visible, input:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 .hint { font-size: 12.5px; color: var(--muted); }
 .vol { display: flex; align-items: center; gap: 10px; }
@@ -182,7 +184,7 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
     <div class="control">
       <span class="label" id="motionLabel">Motion</span>
       <div class="seg" role="group" aria-labelledby="motionLabel">
-        <button type="button" id="motion" aria-pressed="true">Pause motion</button>
+        <button type="button" id="motion" aria-pressed="true">❚❚ Pause motion</button>
       </div>
       <span class="hint" id="motionHint" hidden>Your computer is set to reduce animations. Press Pause motion to stop the movement.</span>
     </div>
@@ -653,7 +655,7 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
   function setMotion(on) {
     animate = on;
     $("motion").setAttribute("aria-pressed", String(on));
-    $("motion").textContent = on ? "Pause motion" : "Play motion";
+    $("motion").textContent = on ? "❚❚ Pause motion" : "▶ Play motion";
     $("motionHint").hidden = !on || !reduceMotion.matches;
     drawRigs(0);
   }
