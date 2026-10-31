@@ -5,6 +5,10 @@
   bars from `results/m4_scores.csv` at the nearest 0.5 N, a whoosh switch, and
   play buttons for the six 2 N WAVs in `results/audio/`.
 - `tests/test_viz.py` checks the embedded scores match the CSV.
+- Fix: on computers set to reduce animations, both pages froze the
+  propellers (only a tiny turn on each tab click). They now start paused
+  with a note, and a Play motion / Pause motion button turns motion on or off.
+- Fix: the Lab showed every station at once outside claude.ai.
 
 ## v0.4-m4 (2026-10-31): listen and score
 - Plain words: the predicted hum is now a sound you can play, with an optional

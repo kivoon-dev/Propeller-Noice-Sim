@@ -179,6 +179,13 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
       </div>
       <div class="vol"><label for="volume" class="hint">Volume</label><input type="range" id="volume" min="0" max="1" step="0.01" value="0.5"></div>
     </div>
+    <div class="control">
+      <span class="label" id="motionLabel">Motion</span>
+      <div class="seg" role="group" aria-labelledby="motionLabel">
+        <button type="button" id="motion" aria-pressed="true">Pause motion</button>
+      </div>
+      <span class="hint" id="motionHint" hidden>Paused because your computer is set to reduce animations. Press Play motion to watch it spin.</span>
+    </div>
   </section>
 
   <section class="bench" aria-label="Rig view">
@@ -293,6 +300,7 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
   // ---- State -------------------------------------------------------------
   const state = { T: 2.0, side: "slip", listen: -1, volume: 0.5 };
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let animate = !reduceMotion.matches;
   const $ = (id) => document.getElementById(id);
   let colors = {};
   function readColors() {
@@ -466,7 +474,7 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
     $("sideHint").textContent = SIDES[state.side].hint;
     drawChartA(); drawChartB(results); drawChartC(results); legends();
     updateAudio();
-    if (reduceMotion.matches) drawRigs(0);
+    if (!animate) drawRigs(0);
   }
 
   // ---- Rig drawing ----------------------------------------------------------
@@ -590,7 +598,7 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (!reduceMotion.matches) drawRigs(dt);
+    if (animate) drawRigs(dt);
     requestAnimationFrame(frame);
   }
 
@@ -640,16 +648,25 @@ svg .zero { stroke: var(--muted); stroke-width: 1; fill: none; }
   $("listenP1").addEventListener("click", () => setListen(1));
   $("volume").addEventListener("input", (e) => { state.volume = parseFloat(e.target.value); updateAudio(); });
 
-  const refreshTheme = () => { readColors(); if (reduceMotion.matches) drawRigs(0); };
+  const refreshTheme = () => { readColors(); if (!animate) drawRigs(0); };
+  // Motion starts paused when the computer asks for reduced motion; the button overrides it.
+  function setMotion(on) {
+    animate = on;
+    $("motion").setAttribute("aria-pressed", String(on));
+    $("motion").textContent = on ? "Pause motion" : "Play motion";
+    $("motionHint").hidden = on || !reduceMotion.matches;
+    drawRigs(0);
+  }
+  $("motion").addEventListener("click", () => setMotion(!animate));
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshTheme);
   new MutationObserver(refreshTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  reduceMotion.addEventListener("change", () => drawRigs(0));
+  reduceMotion.addEventListener("change", () => setMotion(!reduceMotion.matches));
   window.addEventListener("resize", () => drawRigs(0));
 
   state.T = parseFloat($("thrust").value) || 2.0;
   readColors();
   update();
-  drawRigs(0.016);
+  setMotion(animate);
   requestAnimationFrame(frame);
 })();
 </script>

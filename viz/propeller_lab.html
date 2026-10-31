@@ -68,6 +68,8 @@ input[type="range"] { width: 100%; accent-color: var(--sound); height: 28px; }
 .tabs a[aria-current="page"], .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
 .tabs a[aria-current="page"] span { color: var(--panel); opacity: 0.7; }
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.motion { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.motion .hint { font-size: 13px; color: var(--muted); max-width: 32ch; }
 .seg button { font: 500 14px/1 var(--font-body); padding: 10px 12px; }
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--sound); outline-offset: 2px; }
 
@@ -164,6 +166,10 @@ canvas { display: block; width: 100%; height: 270px; }
       <a href="#notes" id="tab-notes">Notes<span>M3</span></a>
       <a href="#score" id="tab-score">Score<span>M4</span></a>
     </nav>
+    <div class="motion">
+      <button type="button" class="toggle" id="motion" aria-pressed="true">Pause motion</button>
+      <span class="hint" id="motionHint" hidden>Paused because your computer is set to reduce animations. Press Play motion to watch it spin.</span>
+    </div>
   </section>
 
   <!-- M1 -->
@@ -346,8 +352,8 @@ canvas { display: block; width: 100%; height: 270px; }
 
   // ---------- State ----------
   const $ = (id) => document.getElementById(id);
-  const state = { T: 2, view: "spin", slices: false, below: true, layout: "two", strength: 0.05, listen: null, whoosh: "none", wav: null };
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const state = { T: 2, view: "spin", slices: false, below: true, layout: "two", strength: 0.05, listen: null, whoosh: "none", wav: null, animate: !reduce.matches };
   let C = {};
   function readColors() { const cs = getComputedStyle(document.documentElement); ["--ink", "--muted", "--line", "--p1", "--p2", "--sound", "--stall", "--ok", "--panel"].forEach((k) => C[k] = cs.getPropertyValue(k).trim()); }
   const fmt = (v, d = 1) => Number.isFinite(v) ? v.toFixed(d) : "–";
@@ -408,7 +414,7 @@ canvas { display: block; width: 100%; height: 270px; }
     updateNotes();
     updateScore();
     updateAudio();
-    if (reduce.matches) drawAll(0);
+    if (!state.animate) drawAll(0);
   }
   const count = (s) => s.split("").filter((c) => c === "1").length;
 
@@ -639,7 +645,15 @@ canvas { display: block; width: 100%; height: 270px; }
     if (state.view === "notes") drawNotes(dt);
   }
   let last = performance.now();
-  function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; if (!reduce.matches) drawAll(dt); requestAnimationFrame(frame); }
+  function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; if (state.animate) drawAll(dt); requestAnimationFrame(frame); }
+  // Motion starts paused when the computer asks for reduced motion; the button overrides it.
+  function setMotion(on) {
+    state.animate = on;
+    $("motion").setAttribute("aria-pressed", String(on));
+    $("motion").textContent = on ? "Pause motion" : "Play motion";
+    $("motionHint").hidden = on || !reduce.matches;
+    drawAll(0);
+  }
 
   // ---------- Audio ----------
   let audio = null;
@@ -692,7 +706,7 @@ canvas { display: block; width: 100%; height: 270px; }
     });
     if (state.listen && !(state.listen === "notes" ? state.view === "notes" : state.view === "hum")) { state.listen = null; updateAudio(); }
     if (state.wav && state.view !== "score") stopWav();
-    drawAll(0.016);
+    drawAll(0);
   }
 
   // ---------- Wiring ----------
@@ -715,6 +729,8 @@ canvas { display: block; width: 100%; height: 270px; }
   }));
   document.querySelectorAll("#wavs button").forEach((b) => b.addEventListener("click", () => toggleWav(b.dataset.wav)));
   $("strength").addEventListener("input", (e) => { state.strength = parseFloat(e.target.value) / 100; update(); });
+  $("motion").addEventListener("click", () => setMotion(!state.animate));
+  reduce.addEventListener("change", () => setMotion(!reduce.matches));
   window.addEventListener("hashchange", route);
   window.addEventListener("resize", () => drawAll(0));
   const refresh = () => { readColors(); drawAll(0); };
@@ -726,6 +742,7 @@ canvas { display: block; width: 100%; height: 270px; }
   readColors();
   update();
   route();
+  setMotion(state.animate);
   requestAnimationFrame(frame);
 })();
 </script>
