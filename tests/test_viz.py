@@ -7,6 +7,8 @@ example when the real chords are measured), these tests fail until the pages
 are updated too.
 """
 
+import csv
+import json
 import re
 from pathlib import Path
 
@@ -63,3 +65,19 @@ def test_lab_stalled_slices_match_model(prop):
     sol = solve_hover(prop)
     expected = "".join("1" if cl >= DEFAULT_AIRFOIL.cl_max - 1e-12 else "0" for cl in sol.cl)
     assert match.group(1) == expected
+
+
+def test_lab_scores_match_m4_csv():
+    """The Score tab embeds results/m4_scores.csv, rounded for display."""
+    src = _page_source("propeller_lab.html")
+    scores = json.loads(re.search(r"const SCORES = (\{.*?\});\n", src).group(1))
+    csv_path = VIZ.parent / "results" / "m4_scores.csv"
+    rows = list(csv.DictReader(csv_path.open(encoding="utf-8")))
+    assert sum(len(v) for levels in scores.values() for v in levels.values()) == len(rows)
+    for r in rows:
+        key = "5152" if r["prop_name"].startswith("Gemfan 5152 ") else "LR5126-2"
+        page = next(x for x in scores[key][r["whoosh"]] if x[0] == float(r["thrust_N"]))
+        assert page[1] == pytest.approx(float(r["spl_dBA"]), abs=0.051)
+        assert page[2] == pytest.approx(float(r["N5"]), abs=0.0051)
+        assert page[3] == pytest.approx(float(r["S"]), abs=0.0051)
+        assert page[4] == pytest.approx(float(r["PA"]), abs=0.0051)

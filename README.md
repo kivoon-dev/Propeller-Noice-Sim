@@ -1,7 +1,7 @@
 # Propeller Noise Simulator
 
 **[▶ Open the Propeller Lab](https://kivoon-dev.github.io/Propeller-Noice-Sim/viz/propeller_lab.html)**: slide the thrust and watch, hear
-and compare both propellers in your browser (Milestones 1 to 3).
+and compare both propellers in your browser (Milestones 1 to 4).
 
 How fast, how loud, and how annoying are small drone propellers?
 
@@ -29,8 +29,8 @@ same commands with `!` in front.
 ## See it and hear it
 
 The [Propeller Lab](https://kivoon-dev.github.io/Propeller-Noice-Sim/viz/propeller_lab.html) ([`viz/propeller_lab.html`](viz/propeller_lab.html))
-has three stations: Spin (M1), Hum (M2) and Notes (M3, blade layouts and the
-shaft tone). [`viz/hum_bench.html`](viz/hum_bench.html) is the older bench: drag the
+has four stations: Spin (M1), Hum (M2), Notes (M3, blade layouts and the
+shaft tone) and Score (M4, dB(A) vs annoyance, with the WAVs to play). [`viz/hum_bench.html`](viz/hum_bench.html) is the older bench: drag the
 thrust, watch both propellers spin with their downwash and sound reaching the
 microphone, read the live numbers and charts, and press Listen to hear each
 propeller's predicted hum. Download the file and open it in any web browser (it

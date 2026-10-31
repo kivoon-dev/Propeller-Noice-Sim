@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased: Score tab
+- `viz/propeller_lab.html`: fourth station, Score (M4). dB(A) and annoyance
+  bars from `results/m4_scores.csv` at the nearest 0.5 N, a whoosh switch, and
+  play buttons for the six 2 N WAVs in `results/audio/`.
+- `tests/test_viz.py` checks the embedded scores match the CSV.
+
 ## v0.4-m4 (2026-10-31): listen and score
 - Plain words: the predicted hum is now a sound you can play, with an optional
   guessed "whoosh" (rushing air) at three levels, and each sound is scored the
