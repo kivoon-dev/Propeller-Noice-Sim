@@ -1,13 +1,34 @@
 # Changelog
 
-## Unreleased: Propeller Lab page
-- `viz/propeller_lab.html`: one page with three stations, Spin (M1, with the
-  80 blade slices and which ones stall), Hum (M2, mic below or above) and Notes
-  (M3, 2 / 4 even / 4 uneven / 4 uneven with one stronger blade, a one-turn
-  rhythm strip and shaft-order note bars). Same model as the Python code.
-- Published with GitHub Pages and linked at the top of the README.
-- `tests/test_viz.py` now checks both pages, plus the Lab's 4-blade
-  coefficients and stalled-slice pattern.
+## v0.4-m4 (2026-10-31): listen and score
+- Plain words: the predicted hum is now a sound you can play, with an optional
+  guessed "whoosh" (rushing air) at three levels, and each sound is scored the
+  way listeners judge it: loudness, sharpness, roughness and annoyance.
+- `audio.py`: calibrated sum of sines in pascals (seeded phases), ASSUMPTION
+  whoosh (500 Hz-12 kHz, 3 kHz hump, 6 dB/octave, level ~ tip speed^5,
+  reference = 5152 hum at 2 N plus none / -10 / 0 dB), A-weighted FFT level
+  check, 16-bit WAV writer.
+- `psycho.py`: N5 (ISO 532-1, MoSQITo `loudness_zwtv`), DIN sharpness,
+  Daniel-Weber roughness, F = 0 (ASSUMPTION), Zwicker-Fastl annoyance PA.
+  `mosqito==1.2.1` pinned.
+- `scripts/run_m4.py`: both props, 0.5-3.5 N, three whoosh levels ->
+  `results/m4_scores.csv`, `m4_rankings.png`, `m4_scores_vs_thrust.png`,
+  six 4 s WAVs at 2 N in `results/audio/`, and the M3 layouts in
+  `results/m4_layouts.csv`.
+- Result: at 2 N the LR5126-2 is first by dB(A) and by annoyance at every
+  whoosh level, so the hypothesis holds in this model. Hum-only S is 0.5-0.7
+  acum and R about 0.001 asper, so PA = N5. A whoosh 10 dB(A) below the hum
+  raises dB(A) by only 0.4 dB but doubles loudness. The M3 once-per-turn note
+  adds no roughness, but adds 9% loudness to the 2-blade at the same dB(A).
+- 15 new tests (`tests/test_psycho.py`); 68 pass.
+- Also in this release, the Propeller Lab page:
+  - `viz/propeller_lab.html`: one page with three stations, Spin (M1, with the
+    80 blade slices and which ones stall), Hum (M2, mic below or above) and
+    Notes (M3, 2 / 4 even / 4 uneven / 4 uneven with one stronger blade, a
+    one-turn rhythm strip and shaft-order note bars). Same model as the Python code.
+  - Published with GitHub Pages and linked at the top of the README.
+  - `tests/test_viz.py` now checks both pages, plus the Lab's 4-blade
+    coefficients and stalled-slice pattern.
 
 ## v0.3-m3 (2026-10-29): blade spacing and loading mismatch
 - `spacing.py`: one blade's Gutin tone at every shaft order n, summed over the

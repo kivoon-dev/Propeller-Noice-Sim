@@ -19,6 +19,7 @@ pip install -r requirements.txt
 python scripts/run_m1.py     # spin speed; results go to results/
 python scripts/run_m2.py     # hum level in dB(A)
 python scripts/run_m3.py     # blade spacing and uneven blades
+python scripts/run_m4.py     # sound files + loudness and annoyance (about 3 min)
 pytest                       # checks the physics and Empa's findings
 ```
 
@@ -129,6 +130,68 @@ Donut. The uneven angles and the 5% mismatch are guesses. Gutin's model makes th
 slow 4-blade rotor unrealistically quiet (about 11 dB(A)), because it leaves out
 the unsteady and broadband noise that real rotors also make.
 
+## Results so far (Milestone 4: listen and score)
+
+**The question:** at the same thrust, is the loudest propeller also the most
+annoying one?
+
+**What we did, in plain words.** We turned the predicted hum into a sound file,
+so you can listen to it, and then scored it the way people judge sound:
+- **Loudness** (sone): how loud it seems; 2 sone sounds twice as loud as 1.
+- **Sharpness** (acum): how hissy and high-pitched it is.
+- **Roughness** (asper): a fast buzzing flutter.
+- **Annoyance**: starts from loudness and goes up if the sound is sharp or rough.
+
+Real propellers also make a rushing-air "whoosh" that our physics does not
+predict. So we **guessed** it at three levels (none, low, high) and checked
+whether the answer depends on the guess.
+
+At 2.0 N, 1 m, θ = 150°:
+
+| Whoosh | Prop | dB(A) | Loudness N5 (sone) | Sharpness (acum) | Annoyance PA |
+|---|---|---|---|---|---|
+| none | 5152 | 53.3 | 3.1 | 0.54 | 3.1 |
+| none | LR5126-2 | 60.0 | 4.8 | 0.71 | 4.8 |
+| low | 5152 | 53.7 | 6.3 | 1.51 | 6.3 |
+| low | LR5126-2 | 60.3 | 9.4 | 1.66 | 9.4 |
+| high | 5152 | 56.3 | 9.8 | 1.89 | 10.2 |
+| high | LR5126-2 | 62.7 | 14.2 | 1.98 | 15.4 |
+
+**Answer in this model: yes.** The low-pitch LR5126-2 is the loudest *and* the
+most annoying at every whoosh level and every thrust. That supports the
+hypothesis. The ranking did not flip, so the whoosh guess does not decide the
+answer here.
+
+![Rankings](results/m4_rankings.png)
+
+**What else we learned:**
+- **The hum alone is not sharp or rough.** Sharpness stays below 1.75 acum
+  (where it starts to count) and roughness is about 0.001 asper. So annoyance
+  equals loudness.
+- **dB(A) under-counts the whoosh.** A whoosh 10 dB(A) quieter than the hum
+  adds only 0.4 dB to the dB(A) reading, but it *doubles* the loudness (3.1 to
+  6.3 sone). The ear adds up sounds in different pitch ranges more generously
+  than a dB(A) meter does.
+- **The once-per-turn note (Milestone 3) adds no roughness.** It is too far in
+  pitch from the hum to beat against it. It does make the 2-blade 9% louder
+  (3.07 to 3.35 sone) at the same dB(A).
+
+**Be careful with this answer.** Our whoosh grows with blade-tip speed, and the
+LR5126-2 spins faster, so the whoosh can only make it worse. By construction, it
+cannot reverse the ranking. A whoosh with a different shape for each propeller,
+which real blades could have, might still change the answer. Empa's recordings
+(Milestone 5) or the real rig are needed to test that.
+
+**Listen** (2 N, all on the same volume scale, so louder files really are louder):
+5152 [no whoosh](results/audio/m4_5152_2N_whoosh-none.wav) ·
+[low](results/audio/m4_5152_2N_whoosh-low.wav) ·
+[high](results/audio/m4_5152_2N_whoosh-high.wav);
+LR5126-2 [no whoosh](results/audio/m4_LR5126-2_2N_whoosh-none.wav) ·
+[low](results/audio/m4_LR5126-2_2N_whoosh-low.wav) ·
+[high](results/audio/m4_LR5126-2_2N_whoosh-high.wav).
+
+![Scores vs thrust](results/m4_scores_vs_thrust.png)
+
 ## Checkpoints: how to go back if something breaks
 
 Every working version is saved as a git **commit**. Every finished milestone gets a
@@ -152,7 +215,7 @@ Rule of thumb: commit small and often, tag only when the tests pass.
 | v0.1-m1 ✅ | Spin speed, hum frequency, power, efficiency |
 | v0.2-m2 ✅ | Tonal noise level at 1 m, 60° below the rotor (Gutin model), dB(A) |
 | v0.3-m3 ✅ | Blade-spacing study: 2 vs 4 even vs 4 uneven blades |
-| v0.4-m4 | Sound files + loudness, sharpness, annoyance (ISO 532-1) |
+| v0.4-m4 ✅ | Sound files + loudness, sharpness, annoyance (ISO 532-1) |
 | v0.5-m5 | Score Empa's real recordings, if shared |
 | v0.6-m6 | Virtual rig (3D model + animated test) |
 

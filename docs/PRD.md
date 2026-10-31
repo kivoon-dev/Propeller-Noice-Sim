@@ -53,7 +53,8 @@ change. θ = 30° would be the intake side, where the two terms partly cancel.
 
 ## Output CSV columns
 prop, thrust_N, rpm, tip_mach, bpf_Hz, power_W (M1); spl_dBA (M2);
-loudness_sone, sharpness_acum, annoyance (M4). Plus one WAV per prop per thrust.
+N5 (loudness, sone), S (sharpness, acum), R (roughness, asper), PA (annoyance) (M4),
+for each whoosh level. Plus 4-second WAVs at 2 N, one per prop per whoosh level.
 thrust_N and power_W match the rig's Arduino log.
 
 ## Success criteria

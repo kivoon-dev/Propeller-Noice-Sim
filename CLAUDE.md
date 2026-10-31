@@ -36,6 +36,11 @@ technical name. Keep code readable over clever.
 - `src/propnoise/spacing.py`: Milestone 3, blade angles and loading weights
   (shaft-order tones)
 - `scripts/run_m3.py`: writes `results/m3_spacing.csv` and the tone ladder
+- `src/propnoise/audio.py`: Milestone 4, tones to a signal in pascals, ASSUMPTION
+  whoosh, WAV writer
+- `src/propnoise/psycho.py`: Milestone 4, N5, sharpness, roughness, annoyance (MoSQITo)
+- `scripts/run_m4.py`: writes `results/m4_scores.csv`, `m4_layouts.csv`, charts and
+  `results/audio/` WAVs (takes about 3 minutes)
 - `viz/hum_bench.html`, `viz/propeller_lab.html`: interactive pages; copy CT/CP
   (2- and 4-blade), stalled slices and constants into JS (`tests/test_viz.py`
   keeps them in sync, so update both pages when geometry changes). The Lab is
@@ -48,8 +53,8 @@ technical name. Keep code readable over clever.
 | v0.1-m1 | Spin speed, hum frequency, power, figure of merit | done |
 | v0.2-m2 | Tonal noise at 1 m, 60 deg below rotor, theta = 150 (Gutin), dB(A) | done |
 | v0.3-m3 | Blade-spacing study: 2 vs 4 even vs 4 uneven blades, loading mismatch | done |
-| v0.4-m4 | WAV synthesis + loudness, sharpness, annoyance (MoSQITo, ISO 532-1) | next |
-| v0.5-m5 | Same scores on Empa's real data, if shared | |
+| v0.4-m4 | WAV synthesis + loudness, sharpness, annoyance (MoSQITo, ISO 532-1) | done |
+| v0.5-m5 | Same scores on Empa's real data, if shared | next |
 | v0.6-m6 | Virtual rig: 3D model writing the Arduino CSV columns | |
 
 ## Known limitations (do not hide these)
@@ -66,3 +71,7 @@ technical name. Keep code readable over clever.
   angles (0/85/180/265) and the 5% loading mismatch are ESTIMATES. Steady-loading
   Gutin makes the slow 4-blade rotor very quiet (about 11 dB(A)); real rotors add
   unsteady-loading and broadband noise that this model leaves out.
+- M4 whoosh (broadband) is an ASSUMPTION: fixed shape (3 kHz hump), level set
+  from the 5152's hum at 2 N and scaled by tip speed^5 for both props. Because it
+  follows tip speed, it cannot reverse the hum ranking by construction. Fluctuation
+  strength is set to 0 (not in MoSQITo; steady hover).
